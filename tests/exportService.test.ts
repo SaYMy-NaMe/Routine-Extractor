@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { baseFileName, buildDocx, buildIcs, buildPdf, type ExportData } from '../src/services/exportService'
+import { baseFileName, buildDocx, buildPdf, type ExportData } from '../src/services/exportService'
 import { buildRoutineGrid, usedTimeSlots } from '../src/services/routineBuilder'
 import { computeWorkload } from '../src/services/workloadCalculator'
 import type { ParsedCell } from '../src/types/routine'
@@ -63,27 +63,5 @@ describe('exportService', () => {
   it('builds a DOCX blob', async () => {
     const blob = await buildDocx(data)
     expect(blob.size).toBeGreaterThan(1000)
-  })
-
-  it('builds weekly recurring iCal events with local floating times', () => {
-    const ics = buildIcs(data, {
-      semesterStart: '2026-09-20',
-      semesterEnd: '2027-01-10',
-      reminderMinutes: 15,
-    })
-    expect(ics).toContain('BEGIN:VCALENDAR')
-    expect((ics.match(/BEGIN:VEVENT/g) ?? []).length).toBe(3)
-    // 2026-09-20 is a Sunday → first Saturday class on 2026-09-26, first Thursday on 2026-09-24
-    expect(ics).toContain('DTSTART:20260926T113000')
-    expect(ics).toContain('DTSTART:20260924T113000')
-    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=SA;UNTIL=20270110T235959')
-    expect(ics).toContain('SUMMARY:CSE 112.7 LAB (N607)')
-    expect(ics).toContain('TRIGGER:-PT15M')
-    expect(ics.split('\r\n').every((l) => Buffer.byteLength(l) <= 75 + 3)).toBe(true)
-  })
-
-  it('omits alarms when the reminder is 0', () => {
-    const ics = buildIcs(data, { semesterStart: '2026-09-20', semesterEnd: '2027-01-10', reminderMinutes: 0 })
-    expect(ics).not.toContain('VALARM')
   })
 })

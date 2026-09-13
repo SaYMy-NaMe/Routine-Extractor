@@ -1,8 +1,8 @@
 # Faculty Routine Extractor & Generator
 
 Drop the departmental routine PDF, type a faculty short form (e.g. `ASHRAF`), and get a
-clean personal weekly routine with a credit-workload summary — exportable as **PDF**,
-**DOCX**, or **iCal (.ics)**. Everything runs in the browser; the PDF never leaves your machine.
+clean personal weekly routine with a credit-workload summary — exportable as **PDF** or
+**DOCX**. Everything runs in the browser; the PDF never leaves your machine.
 
 ![flow](https://img.shields.io/badge/Vite-React%2019-blue) ![ts](https://img.shields.io/badge/TypeScript-strict-blue) ![tw](https://img.shields.io/badge/Tailwind-v4-38bdf8)
 
@@ -21,7 +21,7 @@ clean personal weekly routine with a credit-workload summary — exportable as *
 5. **Edit** — click any chip to change course, section, room, type or time; hover an empty cell
    to add a class; add/remove time columns; cycle off-day badges.
 6. **Export** — `src/services/exportService.ts` renders a single-page landscape PDF (vector text
-   via jsPDF), a Word document (`docx`), and a weekly-recurring calendar (`.ics`).
+   via jsPDF) and a Word document (`docx`).
 
 ## Scripts
 

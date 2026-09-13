@@ -80,7 +80,7 @@ function App() {
             <Card
               className="no-print"
               title="5 · Export"
-              subtitle="Single-page landscape PDF, Word document, or calendar file"
+              subtitle="Single-page landscape PDF or editable Word document"
             >
               <ExportControls
                 data={{
