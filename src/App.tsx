@@ -48,7 +48,7 @@ function App() {
           </Card>
         </div>
 
-        {state.grid && (
+        {state.grid && (state.profile.searchQuery.trim() || state.grid.slots.length > 0) && (
           <>
             <Card
               className="no-print"
