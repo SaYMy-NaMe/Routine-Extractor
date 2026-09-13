@@ -14,7 +14,7 @@ import type {
   SessionType,
   TimeSlot,
 } from '../types/routine'
-import { DAYS, EVENING_SLOT, defaultFrequency } from '../types/routine'
+import { DAYS, EVENING_SLOT, FREQUENCY_LABELS, defaultFrequency, fullCourseCode } from '../types/routine'
 import { formatRange, overlapMinutes } from './timeUtils'
 
 /** Standard theory columns used when the PDF gives us nothing better. */
@@ -172,4 +172,16 @@ export function slotsAt(grid: RoutineGrid, day: DayName, slotId: string): Schedu
   return grid.slots
     .filter((s) => s.day === day && s.slotId === slotId)
     .sort((a, b) => a.startMin - b.startMin)
+}
+
+/** Printed chip text, e.g. "CSE 226.5 LAB" or "CSE 411 [Alt. Week]" for evening classes. */
+export function sessionLabel(slot: ScheduleSlot, column?: Pick<TimeSlot, 'evening'>): string {
+  let label = `${fullCourseCode(slot)}${slot.type === 'lab' ? ' LAB' : ''}`
+  if (column?.evening && slot.frequency) label += ` [${FREQUENCY_LABELS[slot.frequency]}]`
+  return label
+}
+
+/** Is the (day, column) cell an explicitly marked-off evening slot? */
+export function isEveningOff(grid: RoutineGrid, day: DayName, column: TimeSlot): boolean {
+  return Boolean(column.evening) && grid.eveningOff.includes(day)
 }

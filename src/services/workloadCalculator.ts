@@ -34,7 +34,7 @@ export function computeWorkload(slots: ScheduleSlot[], options: WorkloadOptions 
       entry = { type: s.type, sections: new Set(), typeVotes: { theory: 0, lab: 0 } }
       byCourse.set(key, entry)
     }
-    entry.sections.add(s.section || '1')
+    entry.sections.add(s.section) // '' = printed without a section number (e.g. an evening block)
     entry.typeVotes[s.type] += 1
   }
 
@@ -67,6 +67,13 @@ export function computeWorkload(slots: ScheduleSlot[], options: WorkloadOptions 
     totalSections: courses.reduce((n, c) => n + c.sections.length, 0),
     totalCredits: round(courses.reduce((n, c) => n + c.totalCredits, 0)),
   }
+}
+
+/** "3 (sec. 1, 2, 3)" — section count with the section numbers, for summary tables. */
+export function formatSections(c: CourseWorkload): string {
+  const n = c.sections.length
+  const list = c.sections.map((s) => s || 'n/a').join(', ')
+  return `${n} (sec. ${list})`
 }
 
 /** "3 Credits * 3 Sections = 9 Credits" — the line printed under the routine. */

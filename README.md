@@ -21,8 +21,12 @@ clean personal weekly routine with a credit-workload summary — exportable as *
    lab = 1.5 credits/section; a section counts once regardless of weekly meetings.
 5. **Edit** — click any chip to change course, section, room, type or time; hover an empty cell
    to add a class; add/remove time columns; cycle off-day badges.
-6. **Export** — `src/services/exportService.ts` renders a single-page landscape PDF (vector text
-   via jsPDF) and a Word document (`docx`).
+6. **Evening slot** — a pinned `6:30 PM – 9:30 PM` column is always present. Its cells open a
+   popover to set course, room, type and frequency: theory defaults to **every week**, labs to
+   **alternating weeks**; a cell can also be cleared or marked `OFF`.
+7. **Export** — `src/services/exportService.ts` renders a single-page landscape PDF (vector text
+   via jsPDF) and a Word document (`docx`), each with the full matrix, evening column with
+   `[Weekly]` / `[Alt. Week]` tags, and a workload summary table.
 
 ## Scripts
 

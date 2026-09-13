@@ -21,17 +21,10 @@ import {
   WidthType,
 } from 'docx'
 import { saveAs } from 'file-saver'
-import type {
-  DayName,
-  FacultyProfile,
-  RoutineGrid,
-  ScheduleSlot,
-  TimeSlot,
-  WorkloadSummary,
-} from '../types/routine'
-import { DAY_LABELS, fullCourseCode } from '../types/routine'
-import { slotsAt } from './routineBuilder'
-import { describeCourseLine, formatCredits } from './workloadCalculator'
+import type { DayName, FacultyProfile, RoutineGrid, TimeSlot, WorkloadSummary } from '../types/routine'
+import { DAY_LABELS } from '../types/routine'
+import { isEveningOff, sessionLabel, slotsAt } from './routineBuilder'
+import { formatCredits, formatSections } from './workloadCalculator'
 
 export interface ExportData {
   profile: FacultyProfile
@@ -53,6 +46,8 @@ const COLORS = {
   labBg: [230, 249, 240],
   labInk: [6, 95, 70],
   offBg: [243, 244, 246],
+  eveningBg: [245, 243, 255],
+  eveningInk: [76, 29, 149],
   weekendBg: [255, 247, 230],
   weekendInk: [146, 64, 14],
 } as const satisfies Record<string, RGB>
@@ -63,6 +58,8 @@ const HEX = {
   labBg: 'E6F9F0',
   labInk: '065F46',
   offBg: 'F3F4F6',
+  eveningBg: 'F5F3FF',
+  eveningInk: '4C1D95',
   weekendBg: 'FFF7E6',
   headBg: 'F9FAFB',
 }
@@ -85,10 +82,6 @@ function headerLines(p: FacultyProfile): string[] {
 
 function contactLine(p: FacultyProfile): string {
   return [p.email && `Email: ${p.email}`, p.phone && `Contact: ${p.phone}`].filter(Boolean).join(' | ')
-}
-
-function chipLabel(s: ScheduleSlot): string {
-  return `${fullCourseCode(s)}${s.type === 'lab' ? ' LAB' : ''}`
 }
 
 function offDayText(status: RoutineGrid['offDays'][DayName]): string {
@@ -141,13 +134,14 @@ export function buildPdf(data: ExportData): jsPDF {
   const tableTop = y + 8
   const dayW = 22
   const colW = (W - 2 * M - dayW) / Math.max(columns.length, 1)
-  const hasAlt = columns.some((c) => c.altLabel)
+  const hasAlt = columns.some((c) => c.altLabel || c.evening)
   const headH = hasAlt ? 12 : 9
 
   const rowChipCount = grid.days.map((day) =>
     Math.max(1, ...columns.map((c) => slotsAt(grid, day, c.id).length)),
   )
-  const workloadH = workload.courses.length ? 8 + workload.courses.length * 4.5 + 8 : 4
+  const wlRowH = 5.5
+  const workloadH = workload.courses.length ? 6 + wlRowH * (workload.courses.length + 2) : 4
   const footerH = 10
   const available = H - M - tableTop - headH - workloadH - footerH
   const chipH = Math.min(
@@ -171,11 +165,17 @@ export function buildPdf(data: ExportData): jsPDF {
     const x = M + dayW + i * colW
     doc.line(x, tableTop, x, tableTop + headH)
     const mid = x + colW / 2
-    if (c.altLabel) {
+    if (c.evening) {
+      fillColor(doc, COLORS.eveningBg)
+      doc.rect(x, tableTop, colW, headH, 'FD')
+      text(doc, COLORS.eveningInk)
+    }
+    const sub = c.altLabel ?? (c.evening ? 'Evening' : undefined)
+    if (sub) {
       doc.text(c.label, mid, tableTop + 5, { align: 'center' })
       doc.setFont('helvetica', 'normal').setFontSize(6.5)
       text(doc, COLORS.muted)
-      doc.text(c.altLabel, mid, tableTop + 9, { align: 'center' })
+      doc.text(sub, mid, tableTop + 9, { align: 'center' })
       doc.setFont('helvetica', 'bold').setFontSize(7.5)
       text(doc, COLORS.ink)
     } else {
@@ -196,54 +196,113 @@ export function buildPdf(data: ExportData): jsPDF {
     text(doc, COLORS.ink)
     doc.text(DAY_LABELS[day].slice(0, 3), M + dayW / 2, ry + h / 2 + 1.2, { align: 'center' })
 
+    const dayCols = columns.filter((c) => !c.evening)
+    const drawCell = (c: TimeSlot, x: number) => {
+      if (c.evening) {
+        fillColor(doc, COLORS.eveningBg)
+        doc.rect(x, ry, colW, h, 'FD')
+      } else {
+        doc.rect(x, ry, colW, h)
+      }
+      const mid = x + colW / 2
+      if (isEveningOff(grid, day, c)) {
+        doc.setFont('helvetica', 'bold').setFontSize(7.5)
+        text(doc, COLORS.muted)
+        doc.text('OFF', mid, ry + h / 2 + 1.2, { align: 'center', charSpace: 0.6 })
+        return
+      }
+      slotsAt(grid, day, c.id).forEach((s, k) => {
+        const cy = ry + 1.5 + k * chipH
+        const lab = s.type === 'lab'
+        fillColor(doc, lab ? COLORS.labBg : COLORS.theoryBg)
+        doc.roundedRect(x + 1.2, cy, colW - 2.4, chipH - 0.6, 1, 1, 'F')
+        text(doc, lab ? COLORS.labInk : COLORS.theoryInk)
+        doc.setFont('helvetica', 'bold').setFontSize(8)
+        const label = sessionLabel(s, c)
+        if (s.room) {
+          doc.text(label, mid, cy + chipH * 0.42, { align: 'center' })
+          doc.setFont('helvetica', 'normal').setFontSize(7)
+          doc.text(s.room, mid, cy + chipH * 0.78, { align: 'center' })
+        } else {
+          doc.text(label, mid, cy + chipH * 0.6, { align: 'center' })
+        }
+      })
+    }
+
     if (!hasAny && off !== 'none') {
       const weekend = off === 'weekend'
+      const spanW = dayCols.length * colW
       fillColor(doc, weekend ? COLORS.weekendBg : COLORS.offBg)
-      doc.rect(M + dayW, ry, W - 2 * M - dayW, h, 'FD')
-      doc.setFontSize(8)
+      doc.rect(M + dayW, ry, spanW, h, 'FD')
+      doc.setFont('helvetica', 'bold').setFontSize(8)
       text(doc, weekend ? COLORS.weekendInk : COLORS.muted)
-      doc.text(offDayText(off), M + dayW + (W - 2 * M - dayW) / 2, ry + h / 2 + 1.2, {
-        align: 'center',
-        charSpace: 0.6,
+      doc.text(offDayText(off), M + dayW + spanW / 2, ry + h / 2 + 1.2, { align: 'center', charSpace: 0.6 })
+      columns.forEach((c, i) => {
+        if (c.evening) drawCell(c, M + dayW + i * colW)
       })
     } else {
-      columns.forEach((c, i) => {
-        const x = M + dayW + i * colW
-        doc.rect(x, ry, colW, h)
-        slotsAt(grid, day, c.id).forEach((s, k) => {
-          const cy = ry + 1.5 + k * chipH
-          const lab = s.type === 'lab'
-          fillColor(doc, lab ? COLORS.labBg : COLORS.theoryBg)
-          doc.roundedRect(x + 1.2, cy, colW - 2.4, chipH - 0.6, 1, 1, 'F')
-          text(doc, lab ? COLORS.labInk : COLORS.theoryInk)
-          doc.setFont('helvetica', 'bold').setFontSize(8.5)
-          const mid = x + colW / 2
-          if (s.room) {
-            doc.text(chipLabel(s), mid, cy + chipH * 0.42, { align: 'center' })
-            doc.setFont('helvetica', 'normal').setFontSize(7)
-            doc.text(s.room, mid, cy + chipH * 0.78, { align: 'center' })
-          } else {
-            doc.text(chipLabel(s), mid, cy + chipH * 0.6, { align: 'center' })
-          }
-        })
-      })
+      columns.forEach((c, i) => drawCell(c, M + dayW + i * colW))
     }
     ry += h
   })
 
-  /* Workload -------------------------------------------------------------- */
+  /* Workload summary table ---------------------------------------------- */
   if (workload.courses.length) {
-    let wy = ry + 8
-    doc.setFont('helvetica', 'normal').setFontSize(8.5)
-    text(doc, COLORS.ink)
-    for (const c of workload.courses) {
-      doc.text(describeCourseLine(c), cx, wy, { align: 'center' })
-      wy += 4.5
+    const tableW = Math.min(W - 2 * M, 200)
+    const x0 = cx - tableW / 2
+    const widths = [24, 66, 20, 46, 22, 22].map((w) => (w / 200) * tableW)
+    const heads = ['Course', 'Title', 'Type', 'Sections', 'Cr / Section', 'Total']
+    let wy = ry + 6
+    const row = (cells: string[], opts: { fill?: RGB; bold?: boolean; leftAlign?: number[] } = {}) => {
+      if (opts.fill) {
+        fillColor(doc, opts.fill)
+        doc.rect(x0, wy, tableW, wlRowH, 'F')
+      }
+      drawColor(doc, COLORS.line)
+      doc.rect(x0, wy, tableW, wlRowH)
+      let cxx = x0
+      cells.forEach((c, i) => {
+        doc.setFont('helvetica', opts.bold ? 'bold' : 'normal').setFontSize(7.5)
+        text(doc, COLORS.ink)
+        if (i) doc.line(cxx, wy, cxx, wy + wlRowH)
+        const left = opts.leftAlign?.includes(i)
+        const maxW = widths[i] - 3
+        const txt = doc.splitTextToSize(c, maxW)[0] as string
+        doc.text(txt, left ? cxx + 1.5 : cxx + widths[i] / 2, wy + wlRowH / 2 + 1.1, {
+          align: left ? 'left' : 'center',
+        })
+        cxx += widths[i]
+      })
+      wy += wlRowH
     }
-    doc.setFont('helvetica', 'bold').setFontSize(10)
-    doc.text(`Total Workload: ${formatCredits(workload.totalCredits)} Credits`, cx, wy + 2.5, {
-      align: 'center',
-    })
+    row(heads, { fill: COLORS.headBg, bold: true })
+    for (const c of workload.courses) {
+      row(
+        [
+          c.courseCode,
+          c.title || '—',
+          c.type === 'lab' ? 'Lab' : 'Theory',
+          formatSections(c),
+          formatCredits(c.creditsPerSection),
+          formatCredits(c.totalCredits),
+        ],
+        { leftAlign: [1] },
+      )
+    }
+    row(
+      [
+        'Total Workload',
+        '',
+        '',
+        `${workload.totalSections} sections`,
+        '',
+        `${formatCredits(workload.totalCredits)} Credits`,
+      ],
+      {
+        fill: COLORS.headBg,
+        bold: true,
+      },
+    )
   }
 
   /* Footer ---------------------------------------------------------------- */
@@ -252,7 +311,7 @@ export function buildPdf(data: ExportData): jsPDF {
   doc.setDrawColor(229, 231, 235)
   doc.line(M, H - M - 4, W - M, H - M - 4)
   doc.text([profile.fullName, profile.institution].filter(Boolean).join(' · '), M, H - M)
-  doc.text('Generated with Faculty Routine Extractor', W - M, H - M, { align: 'right' })
+  doc.text('Evening: [Weekly] every week · [Alt. Week] alternating weeks', W - M, H - M, { align: 'right' })
 
   doc.setProperties({ title: `${routineTitle(profile)} – ${profile.fullName}`, author: profile.fullName })
   return doc
@@ -303,14 +362,40 @@ export async function buildDocx(data: ExportData): Promise<Blob> {
       ...columns.map((c) =>
         cell(
           [
-            centered(c.label, { bold: true, size: 16 }),
+            centered(c.label, { bold: true, size: 16, color: c.evening ? HEX.eveningInk : undefined }),
             ...(c.altLabel ? [centered(c.altLabel, { size: 14, color: '4B5563' })] : []),
+            ...(c.evening ? [centered('Evening', { size: 14, color: '4B5563' })] : []),
           ],
-          { width: colW, fill: HEX.headBg },
+          { width: colW, fill: c.evening ? HEX.eveningBg : HEX.headBg },
         ),
       ),
     ],
   })
+
+  const dayCols = columns.filter((c) => !c.evening)
+  const eveningCols = columns.filter((c) => c.evening)
+
+  const sessionCell = (day: DayName, c: TimeSlot) => {
+    if (isEveningOff(grid, day, c)) {
+      return cell([centered('OFF', { bold: true, size: 14, color: '9CA3AF' })], {
+        width: colW,
+        fill: HEX.eveningBg,
+      })
+    }
+    const sessions = slotsAt(grid, day, c.id)
+    const paras = sessions.flatMap((s) => {
+      const lab = s.type === 'lab'
+      return [
+        centered(sessionLabel(s, c), { bold: true, size: 18, color: lab ? HEX.labInk : HEX.theoryInk }),
+        ...(s.room ? [centered(s.room, { size: 15, color: lab ? HEX.labInk : HEX.theoryInk })] : []),
+      ]
+    })
+    const only = sessions.length === 1 ? sessions[0] : null
+    return cell(paras.length ? paras : [new Paragraph('')], {
+      width: colW,
+      fill: only ? (only.type === 'lab' ? HEX.labBg : HEX.theoryBg) : c.evening ? HEX.eveningBg : undefined,
+    })
+  }
 
   const bodyRows = grid.days.map((day) => {
     const off = grid.offDays[day]
@@ -325,31 +410,19 @@ export async function buildDocx(data: ExportData): Promise<Blob> {
         children: [
           dayCell,
           cell([centered(offDayText(off), { bold: true, size: 16, color: weekend ? '92400E' : '4B5563' })], {
-            width: tableW - dayW,
+            width: colW * dayCols.length,
             fill: weekend ? HEX.weekendBg : HEX.offBg,
-            span: columns.length,
+            span: dayCols.length,
           }),
+          ...eveningCols.map((c) => sessionCell(day, c)),
         ],
       })
     }
     return new TableRow({
       children: [
         dayCell,
-        ...columns.map((c) => {
-          const sessions = slotsAt(grid, day, c.id)
-          const paras = sessions.flatMap((s) => {
-            const lab = s.type === 'lab'
-            return [
-              centered(chipLabel(s), { bold: true, size: 18, color: lab ? HEX.labInk : HEX.theoryInk }),
-              ...(s.room ? [centered(s.room, { size: 15, color: lab ? HEX.labInk : HEX.theoryInk })] : []),
-            ]
-          })
-          const only = sessions.length === 1 ? sessions[0] : null
-          return cell(paras.length ? paras : [new Paragraph('')], {
-            width: colW,
-            fill: only ? (only.type === 'lab' ? HEX.labBg : HEX.theoryBg) : undefined,
-          })
-        }),
+        ...dayCols.map((c) => sessionCell(day, c)),
+        ...eveningCols.map((c) => sessionCell(day, c)),
       ],
     })
   })
@@ -372,10 +445,58 @@ export async function buildDocx(data: ExportData): Promise<Blob> {
   )
   if (workload.courses.length) {
     children.push(new Paragraph({ spacing: { after: 200 } }))
-    for (const c of workload.courses) children.push(centered(describeCourseLine(c), { size: 19 }))
+    children.push(centered('Workload Summary', { bold: true, size: 22 }))
+    children.push(new Paragraph({ spacing: { after: 60 } }))
+    const wlWidths = [1600, 5200, 1200, 3800, 1600, 1600]
+    const wlRow = (cells: string[], opts: { bold?: boolean; fill?: string } = {}) =>
+      new TableRow({
+        children: cells.map((t, i) =>
+          cell([centered(t, { bold: opts.bold, size: 17 })], { width: wlWidths[i], fill: opts.fill }),
+        ),
+      })
+    children.push(
+      new Table({
+        width: { size: wlWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
+        columnWidths: wlWidths,
+        alignment: AlignmentType.CENTER,
+        rows: [
+          wlRow(['Course', 'Title', 'Type', 'Sections', 'Credits / Section', 'Total Credits'], {
+            bold: true,
+            fill: HEX.headBg,
+          }),
+          ...workload.courses.map((c) =>
+            wlRow([
+              c.courseCode,
+              c.title || '—',
+              c.type === 'lab' ? 'Lab' : 'Theory',
+              formatSections(c),
+              formatCredits(c.creditsPerSection),
+              formatCredits(c.totalCredits),
+            ]),
+          ),
+          wlRow(
+            [
+              'Total Workload',
+              '',
+              '',
+              `${workload.totalSections} sections`,
+              '',
+              `${formatCredits(workload.totalCredits)} Credits`,
+            ],
+            {
+              bold: true,
+              fill: HEX.headBg,
+            },
+          ),
+        ],
+      }),
+    )
     children.push(new Paragraph({ spacing: { after: 80 } }))
     children.push(
-      centered(`Total Workload: ${formatCredits(workload.totalCredits)} Credits`, { bold: true, size: 22 }),
+      centered('Evening classes: [Weekly] every week · [Alt. Week] alternating weeks', {
+        size: 15,
+        color: '4B5563',
+      }),
     )
   }
 

@@ -53,7 +53,7 @@ export function WorkloadSummary({ summary, onTitleChange }: Props) {
                       key={s}
                       className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
-                      {c.courseCode}.{s}
+                      {s ? `${c.courseCode}.${s}` : c.courseCode}
                     </span>
                   ))}
                 </div>

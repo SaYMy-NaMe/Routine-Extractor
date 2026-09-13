@@ -12,6 +12,8 @@
   --lab-bg: #e6f9f0;
   --lab-ink: #065f46;
   --off-bg: #f3f4f6;
+  --evening-bg: #f5f3ff;
+  --evening-ink: #4c1d95;
 
   box-sizing: border-box;
   /* Fixed A4-landscape width (@ 96 dpi) so the preview is true WYSIWYG;
@@ -149,21 +151,43 @@
   background: #fff7e6;
   color: #92400e;
 }
-.sheet__workload {
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-  text-align: center;
-  font-size: 11.5px;
+.sheet__th--evening {
+  background: var(--evening-bg) !important;
+  color: var(--evening-ink);
 }
-.sheet__workload li {
-  margin: 2px 0;
+.sheet__cell--evening {
+  background: #faf9ff;
 }
-.sheet__total {
-  margin: 8px 0 0;
-  text-align: center;
-  font-size: 13px;
+.sheet__offcell {
   font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #9ca3af;
+  font-size: 10px;
+}
+.sheet__workload {
+  width: 100%;
+  margin: 16px auto 0;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.sheet__workload th,
+.sheet__workload td {
+  border: 1px solid #d1d5db;
+  padding: 4px 6px;
+  text-align: center;
+}
+.sheet__workload thead th {
+  background: #f9fafb;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sheet__workload .sheet__wl-title {
+  text-align: left;
+}
+.sheet__workload tfoot td {
+  background: #f9fafb;
+  font-weight: 600;
 }
 .sheet__footer {
   margin-top: 16px;
