@@ -53,7 +53,11 @@ export function SlotEditor({ slot, isNew, onSave, onDelete, onClose }: Props) {
         </h3>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <Field label="Course code · section" className="col-span-2" hint="e.g. CSE 443.2 — section after the dot">
+          <Field
+            label="Course code · section"
+            className="col-span-2"
+            hint="e.g. CSE 443.2 — section after the dot"
+          >
             <Input
               autoFocus
               value={codeInput}
@@ -64,7 +68,11 @@ export function SlotEditor({ slot, isNew, onSave, onDelete, onClose }: Props) {
             />
           </Field>
           <Field label="Room">
-            <Input value={draft.room} onChange={(e) => setDraft({ ...draft, room: e.target.value })} placeholder="N204" />
+            <Input
+              value={draft.room}
+              onChange={(e) => setDraft({ ...draft, room: e.target.value })}
+              placeholder="N204"
+            />
           </Field>
           <Field label="Type">
             <div className="flex rounded-lg border border-slate-300 p-0.5 dark:border-slate-700">

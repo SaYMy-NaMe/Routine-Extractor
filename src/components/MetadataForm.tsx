@@ -47,25 +47,46 @@ export function MetadataForm({ profile, onChange, suggestions, matchCount, fileL
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Full name" className="sm:col-span-2">
-          <Input value={profile.fullName} onChange={set('fullName')} placeholder="Ashrafur Rahman Chowdhury" />
+          <Input
+            value={profile.fullName}
+            onChange={set('fullName')}
+            placeholder="Ashrafur Rahman Chowdhury"
+          />
         </Field>
         <Field label="Title / designation">
           <Input value={profile.title} onChange={set('title')} placeholder="Lecturer" />
         </Field>
         <Field label="Department">
-          <Input value={profile.department} onChange={set('department')} placeholder="Computer Science and Engineering" />
+          <Input
+            value={profile.department}
+            onChange={set('department')}
+            placeholder="Computer Science and Engineering"
+          />
         </Field>
         <Field label="School / faculty" className="sm:col-span-2">
-          <Input value={profile.school} onChange={set('school')} placeholder="School of Science, Engineering and Technology" />
+          <Input
+            value={profile.school}
+            onChange={set('school')}
+            placeholder="School of Science, Engineering and Technology"
+          />
         </Field>
         <Field label="Institution">
-          <Input value={profile.institution} onChange={set('institution')} placeholder="East Delta University" />
+          <Input
+            value={profile.institution}
+            onChange={set('institution')}
+            placeholder="East Delta University"
+          />
         </Field>
         <Field label="Semester">
           <Input value={profile.semester} onChange={set('semester')} placeholder="Summer 2026" />
         </Field>
         <Field label="Email">
-          <Input type="email" value={profile.email} onChange={set('email')} placeholder="name@university.edu" />
+          <Input
+            type="email"
+            value={profile.email}
+            onChange={set('email')}
+            placeholder="name@university.edu"
+          />
         </Field>
         <Field label="Phone">
           <Input type="tel" value={profile.phone} onChange={set('phone')} placeholder="+880 1XXX-XXXXXX" />
@@ -77,7 +98,14 @@ export function MetadataForm({ profile, onChange, suggestions, matchCount, fileL
 
 function SearchIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <circle cx="11" cy="11" r="7" />
       <path strokeLinecap="round" d="M20 20l-3.5-3.5" />
     </svg>

@@ -65,14 +65,20 @@ export function RoutineSheet({ profile, grid, columns, workload }: Props) {
               <tr key={day}>
                 <td className="sheet__day">{DAY_LABELS[day].slice(0, 3)}</td>
                 {!hasAny && off !== 'none' ? (
-                  <td colSpan={columns.length} className={`sheet__off ${off === 'weekend' ? 'sheet__off--weekend' : ''}`}>
+                  <td
+                    colSpan={columns.length}
+                    className={`sheet__off ${off === 'weekend' ? 'sheet__off--weekend' : ''}`}
+                  >
                     {off === 'weekend' ? 'WEEKEND' : 'NO CLASS ON THIS DAY'}
                   </td>
                 ) : (
                   columns.map((col) => (
                     <td key={col.id} className="sheet__cell">
                       {slotsAt(grid, day, col.id).map((s) => (
-                        <span key={s.id} className={`sheet__chip ${s.type === 'lab' ? 'sheet__chip--lab' : ''}`}>
+                        <span
+                          key={s.id}
+                          className={`sheet__chip ${s.type === 'lab' ? 'sheet__chip--lab' : ''}`}
+                        >
                           <b>
                             {fullCourseCode(s)}
                             {s.type === 'lab' ? ' LAB' : ''}

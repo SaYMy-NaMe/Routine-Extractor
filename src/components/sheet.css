@@ -81,7 +81,13 @@
 .sheet__table th.sheet__corner {
   width: 78px;
   position: relative;
-  background: linear-gradient(to top right, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)) #f9fafb;
+  background: linear-gradient(
+      to top right,
+      transparent calc(50% - 0.5px),
+      var(--line) 50%,
+      transparent calc(50% + 0.5px)
+    )
+    #f9fafb;
 }
 .sheet__corner span {
   position: absolute;

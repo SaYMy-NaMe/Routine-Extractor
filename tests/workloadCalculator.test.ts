@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { computeWorkload, describeCourseLine } from '../src/services/workloadCalculator'
 import type { ScheduleSlot } from '../src/types/routine'
 
-const mk = (courseCode: string, section: string, type: ScheduleSlot['type'], day: ScheduleSlot['day'] = 'Sat'): ScheduleSlot => ({
+const mk = (
+  courseCode: string,
+  section: string,
+  type: ScheduleSlot['type'],
+  day: ScheduleSlot['day'] = 'Sat',
+): ScheduleSlot => ({
   id: `${courseCode}.${section}-${day}`,
   day,
   slotId: 'x',

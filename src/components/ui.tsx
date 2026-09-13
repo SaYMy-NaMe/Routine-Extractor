@@ -2,7 +2,13 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react
 
 /** Small shared primitives so forms and toolbars look consistent. */
 
-export function Card({ title, subtitle, actions, children, className = '' }: {
+export function Card({
+  title,
+  subtitle,
+  actions,
+  children,
+  className = '',
+}: {
   title?: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
@@ -27,7 +33,12 @@ export function Card({ title, subtitle, actions, children, className = '' }: {
   )
 }
 
-export function Field({ label, hint, children, className = '' }: {
+export function Field({
+  label,
+  hint,
+  children,
+  className = '',
+}: {
   label: string
   hint?: ReactNode
   children: ReactNode
@@ -78,7 +89,13 @@ export function Button({
   )
 }
 
-export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'theory' | 'lab' | 'warn' | 'ok'; children: ReactNode }) {
+export function Badge({
+  tone = 'neutral',
+  children,
+}: {
+  tone?: 'neutral' | 'theory' | 'lab' | 'warn' | 'ok'
+  children: ReactNode
+}) {
   const tones = {
     neutral: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     theory: 'bg-theory-100 text-theory-700 dark:bg-theory-900/60 dark:text-theory-100',
@@ -87,7 +104,9 @@ export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'theo
     ok: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200',
   }
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide ${tones[tone]}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide ${tones[tone]}`}
+    >
       {children}
     </span>
   )

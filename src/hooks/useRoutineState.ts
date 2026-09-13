@@ -225,10 +225,7 @@ export function useRoutineState() {
     [grid, courseTitles],
   )
 
-  const directoryTags = useMemo(
-    () => (parse ? Object.keys(parse.facultyDirectory).sort() : []),
-    [parse],
-  )
+  const directoryTags = useMemo(() => (parse ? Object.keys(parse.facultyDirectory).sort() : []), [parse])
 
   return {
     status,

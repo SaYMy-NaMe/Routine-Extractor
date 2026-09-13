@@ -1,4 +1,5 @@
 import { AppHeader } from './components/AppHeader'
+import { ExportControls } from './components/ExportControls'
 import { FileDropzone } from './components/FileDropzone'
 import { MetadataForm } from './components/MetadataForm'
 import { RoutineGrid } from './components/RoutineGrid'
@@ -68,11 +69,34 @@ function App() {
               />
             </Card>
 
-            <Card className="no-print" title="4 · Credit workload" subtitle="Theory 3.0 credits per section · Lab 1.5 credits per section">
+            <Card
+              className="no-print"
+              title="4 · Credit workload"
+              subtitle="Theory 3.0 credits per section · Lab 1.5 credits per section"
+            >
               <WorkloadSummary summary={state.workload} onTitleChange={state.setCourseTitle} />
             </Card>
 
-            <Card className="no-print" title="5 · Print preview" subtitle="Exactly what the exported PDF will look like">
+            <Card
+              className="no-print"
+              title="5 · Export"
+              subtitle="Single-page landscape PDF, Word document, or calendar file"
+            >
+              <ExportControls
+                data={{
+                  profile: state.profile,
+                  grid: state.grid,
+                  columns: sheetColumns(state.grid, state.showEmptyColumns),
+                  workload: state.workload,
+                }}
+              />
+            </Card>
+
+            <Card
+              className="print-sheet-card"
+              title="6 · Print preview"
+              subtitle="Exactly what the exported PDF will look like"
+            >
               <div className="overflow-x-auto">
                 <RoutineSheet
                   profile={state.profile}

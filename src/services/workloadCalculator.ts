@@ -22,7 +22,10 @@ export interface WorkloadOptions {
 /** Group sessions by course and count distinct sections. */
 export function computeWorkload(slots: ScheduleSlot[], options: WorkloadOptions = {}): WorkloadSummary {
   const rules = { ...CREDITS_PER_SECTION, ...options.creditsPerSection }
-  const byCourse = new Map<string, { type: SessionType; sections: Set<string>; typeVotes: Record<SessionType, number> }>()
+  const byCourse = new Map<
+    string,
+    { type: SessionType; sections: Set<string>; typeVotes: Record<SessionType, number> }
+  >()
 
   for (const s of slots) {
     const key = s.courseCode.trim().toUpperCase()

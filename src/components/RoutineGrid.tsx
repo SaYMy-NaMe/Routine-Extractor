@@ -63,7 +63,12 @@ export function RoutineGrid(props: Props) {
         <Button size="sm" onClick={() => setAddingColumn((v) => !v)}>
           + Time slot
         </Button>
-        <Button size="sm" variant="ghost" onClick={props.onReset} title="Discard manual edits and re-extract from the PDF">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={props.onReset}
+          title="Discard manual edits and re-extract from the PDF"
+        >
           ↺ Re-extract{manualCount ? ` (${manualCount} edited)` : ''}
         </Button>
       </div>
@@ -72,11 +77,19 @@ export function RoutineGrid(props: Props) {
         <div className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/60">
           <label className="flex flex-col gap-1">
             From
-            <Input type="time" value={newCol.start} onChange={(e) => setNewCol({ ...newCol, start: e.target.value })} />
+            <Input
+              type="time"
+              value={newCol.start}
+              onChange={(e) => setNewCol({ ...newCol, start: e.target.value })}
+            />
           </label>
           <label className="flex flex-col gap-1">
             To
-            <Input type="time" value={newCol.end} onChange={(e) => setNewCol({ ...newCol, end: e.target.value })} />
+            <Input
+              type="time"
+              value={newCol.end}
+              onChange={(e) => setNewCol({ ...newCol, end: e.target.value })}
+            />
           </label>
           <Button
             size="sm"
@@ -108,15 +121,20 @@ export function RoutineGrid(props: Props) {
                 Day / Time
               </th>
               {columns.map((c) => (
-                <th key={c.id} className="group relative border-b border-l border-slate-200 px-2 py-2 text-center font-semibold dark:border-slate-700">
+                <th
+                  key={c.id}
+                  className="group relative border-b border-l border-slate-200 px-2 py-2 text-center font-semibold dark:border-slate-700"
+                >
                   <div>{c.label}</div>
-                  {c.altLabel && <div className="text-[10px] font-normal normal-case opacity-70">{c.altLabel}</div>}
+                  {c.altLabel && (
+                    <div className="text-[10px] font-normal normal-case opacity-70">{c.altLabel}</div>
+                  )}
                   {!usedIds.has(c.id) && (
                     <button
                       type="button"
                       onClick={() => props.onRemoveTimeSlot(c.id)}
                       title="Remove empty column"
-                      className="absolute top-1 right-1 hidden h-5 w-5 items-center justify-center rounded text-slate-400 hover:bg-red-100 hover:text-red-600 group-hover:flex"
+                      className="absolute top-1 right-1 hidden h-5 w-5 items-center justify-center rounded text-slate-400 group-hover:flex hover:bg-red-100 hover:text-red-600"
                     >
                       ×
                     </button>
@@ -141,7 +159,7 @@ export function RoutineGrid(props: Props) {
                       <button
                         type="button"
                         onClick={() => props.onSetOffDay(day, nextOffDay[off])}
-                        className="mt-1 block text-[10px] font-normal text-slate-400 hover:text-theory-500"
+                        className="hover:text-theory-500 mt-1 block text-[10px] font-normal text-slate-400"
                         title="Cycle: empty → no class → weekend"
                       >
                         {off === 'none' ? 'mark off-day' : 'change badge'}
@@ -172,13 +190,20 @@ export function RoutineGrid(props: Props) {
                         >
                           <div className="flex min-h-14 flex-col gap-1">
                             {cellSlots.map((s) => (
-                              <SessionChip key={s.id} slot={s} column={col} onClick={() => setEditing({ slot: s, isNew: false })} />
+                              <SessionChip
+                                key={s.id}
+                                slot={s}
+                                column={col}
+                                onClick={() => setEditing({ slot: s, isNew: false })}
+                              />
                             ))}
                             <button
                               type="button"
                               onClick={() => setEditing({ slot: props.newManualSlot(day, col), isNew: true })}
-                              className={`rounded-md border border-dashed border-transparent py-1 text-[11px] text-slate-400 hover:border-theory-500 hover:text-theory-500 ${
-                                cellSlots.length ? 'opacity-0 group-hover:opacity-100' : 'flex-1 opacity-0 group-hover:opacity-100'
+                              className={`hover:border-theory-500 hover:text-theory-500 rounded-md border border-dashed border-transparent py-1 text-[11px] text-slate-400 ${
+                                cellSlots.length
+                                  ? 'opacity-0 group-hover:opacity-100'
+                                  : 'flex-1 opacity-0 group-hover:opacity-100'
                               }`}
                               aria-label={`Add class on ${DAY_LABELS[day]} at ${col.label}`}
                             >
@@ -215,7 +240,15 @@ export function RoutineGrid(props: Props) {
   )
 }
 
-function SessionChip({ slot, column, onClick }: { slot: ScheduleSlot; column: TimeSlot; onClick: () => void }) {
+function SessionChip({
+  slot,
+  column,
+  onClick,
+}: {
+  slot: ScheduleSlot
+  column: TimeSlot
+  onClick: () => void
+}) {
   const lab = slot.type === 'lab'
   const offGrid = slot.startMin !== column.startMin || slot.endMin !== column.endMin
   return (
@@ -231,7 +264,7 @@ function SessionChip({ slot, column, onClick }: { slot: ScheduleSlot; column: Ti
     >
       <div className="flex items-center justify-between gap-1">
         <span className="font-mono text-xs font-bold">{fullCourseCode(slot)}</span>
-        {lab && <span className="rounded bg-lab-500 px-1 text-[9px] font-bold text-white">LAB</span>}
+        {lab && <span className="bg-lab-500 rounded px-1 text-[9px] font-bold text-white">LAB</span>}
         {slot.source === 'manual' && <span className="text-[9px] opacity-70">edited</span>}
       </div>
       <div className="mt-0.5 flex items-center justify-between text-[11px] opacity-80">
@@ -246,10 +279,12 @@ function Legend() {
   return (
     <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300">
       <span className="flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-sm border border-theory-500/40 bg-theory-100 dark:bg-theory-900/60" /> Theory · 3 cr
+        <span className="border-theory-500/40 bg-theory-100 dark:bg-theory-900/60 h-3 w-3 rounded-sm border" />{' '}
+        Theory · 3 cr
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-sm border border-lab-500/40 bg-lab-100 dark:bg-lab-900/60" /> Lab · 1.5 cr
+        <span className="border-lab-500/40 bg-lab-100 dark:bg-lab-900/60 h-3 w-3 rounded-sm border" /> Lab ·
+        1.5 cr
       </span>
     </div>
   )

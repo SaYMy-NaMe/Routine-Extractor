@@ -1,7 +1,6 @@
 /** Time helpers shared by the parser, grid builder and exporters. */
 
-const TIME_RANGE_RE =
-  /^(\d{1,2})[.:](\d{2})\s*(AM|PM)?\s*[-–—]\s*(\d{1,2})[.:](\d{2})\s*(AM|PM)?$/i
+const TIME_RANGE_RE = /^(\d{1,2})[.:](\d{2})\s*(AM|PM)?\s*[-–—]\s*(\d{1,2})[.:](\d{2})\s*(AM|PM)?$/i
 
 /** Is this string a "8.30-10.00" / "10:00 AM - 11:30 AM" style range? */
 export function isTimeRange(text: string): boolean {

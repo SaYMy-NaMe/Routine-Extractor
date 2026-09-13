@@ -69,7 +69,7 @@ export function FileDropzone({ status, onFile, onReset }: Props) {
 
       {status.kind === 'idle' && (
         <>
-          <UploadIcon className="mb-3 h-10 w-10 text-theory-500" />
+          <UploadIcon className="text-theory-500 mb-3 h-10 w-10" />
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
             Drop the departmental routine PDF here
           </p>
@@ -81,15 +81,17 @@ export function FileDropzone({ status, onFile, onReset }: Props) {
 
       {status.kind === 'parsing' && (
         <>
-          <Spinner className="mb-3 h-8 w-8 text-theory-500" />
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Reading {status.fileName}…</p>
+          <Spinner className="text-theory-500 mb-3 h-8 w-8" />
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            Reading {status.fileName}…
+          </p>
           <p className="mt-1 text-xs text-slate-500">Extracting the routine matrix</p>
         </>
       )}
 
       {status.kind === 'ready' && (
         <>
-          <CheckIcon className="mb-3 h-10 w-10 text-lab-500" />
+          <CheckIcon className="text-lab-500 mb-3 h-10 w-10" />
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{status.fileName}</p>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
             {status.pageCount} page{status.pageCount === 1 ? '' : 's'} · {status.cellCount} class cells found
@@ -122,14 +124,32 @@ export function FileDropzone({ status, onFile, onReset }: Props) {
 
 function UploadIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
+      />
     </svg>
   )
 }
 function CheckIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="9" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 12.5l2.5 2.5 4.5-5" />
     </svg>
@@ -137,7 +157,14 @@ function CheckIcon({ className }: { className?: string }) {
 }
 function ErrorIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="9" />
       <path strokeLinecap="round" d="M12 8v5m0 3h.01" />
     </svg>

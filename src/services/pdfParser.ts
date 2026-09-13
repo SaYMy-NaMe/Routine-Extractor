@@ -70,14 +70,17 @@ function toLines(items: TextItem[]): Line[] {
   return lines
 }
 
-const lineText = (l: Line) => l.items.map((i) => i.str.trim()).join(' ').trim()
+const lineText = (l: Line) =>
+  l.items
+    .map((i) => i.str.trim())
+    .join(' ')
+    .trim()
 
 /* ------------------------------------------------------------------------- */
 /* Structural detectors                                                       */
 /* ------------------------------------------------------------------------- */
 
-const DAY_RE =
-  /^(sat(urday)?|sun(day)?|mon(day)?|tue(s|sday)?|wed(nesday)?|thu(rs|rsday)?|fri(day)?)$/i
+const DAY_RE = /^(sat(urday)?|sun(day)?|mon(day)?|tue(s|sday)?|wed(nesday)?|thu(rs|rsday)?|fri(day)?)$/i
 
 function detectDay(text: string): DayName | null {
   const t = text.trim().replace(/[:.]$/, '')
@@ -314,7 +317,8 @@ export function parseRoutinePages(pages: PageText[]): ParseResult {
   for (const t of tables) {
     for (const c of t.columns) {
       const key = `${t.kind}:${c.startMin}-${c.endMin}`
-      if (!columnMap.has(key)) columnMap.set(key, { kind: t.kind, label: c.label, startMin: c.startMin, endMin: c.endMin })
+      if (!columnMap.has(key))
+        columnMap.set(key, { kind: t.kind, label: c.label, startMin: c.startMin, endMin: c.endMin })
     }
   }
 
@@ -323,9 +327,7 @@ export function parseRoutinePages(pages: PageText[]): ParseResult {
   }
 
   return {
-    cells: cells.sort(
-      (a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.startMin - b.startMin,
-    ),
+    cells: cells.sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.startMin - b.startMin),
     columns: [...columnMap.values()].sort((a, b) => a.startMin - b.startMin),
     facultyDirectory,
     semesterHint,
@@ -388,10 +390,7 @@ export function filterCellsByFaculty(cells: ParsedCell[], query: string): Parsed
 }
 
 /** Resolve a short form to a full name via the parsed directory (case-insensitive). */
-export function lookupFacultyName(
-  directory: Record<string, string>,
-  query: string,
-): string | undefined {
+export function lookupFacultyName(directory: Record<string, string>, query: string): string | undefined {
   const q = query.trim().toUpperCase()
   if (!q) return undefined
   if (directory[q]) return directory[q]

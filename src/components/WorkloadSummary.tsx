@@ -10,18 +10,22 @@ interface Props {
 /** Per-course section counts and credit totals, with editable course titles. */
 export function WorkloadSummary({ summary, onTitleChange }: Props) {
   if (!summary.courses.length) {
-    return <p className="text-sm text-slate-500">No classes yet — the workload appears once the routine has sessions.</p>
+    return (
+      <p className="text-sm text-slate-500">
+        No classes yet — the workload appears once the routine has sessions.
+      </p>
+    )
   }
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] text-sm">
         <thead>
           <tr className="text-left text-xs tracking-wide text-slate-500 uppercase">
-            <th className="pb-2 pr-3 font-medium">Course</th>
-            <th className="pb-2 pr-3 font-medium">Title</th>
-            <th className="pb-2 pr-3 font-medium">Type</th>
-            <th className="pb-2 pr-3 font-medium">Sections</th>
-            <th className="pb-2 pr-3 text-right font-medium">Cr / section</th>
+            <th className="pr-3 pb-2 font-medium">Course</th>
+            <th className="pr-3 pb-2 font-medium">Title</th>
+            <th className="pr-3 pb-2 font-medium">Type</th>
+            <th className="pr-3 pb-2 font-medium">Sections</th>
+            <th className="pr-3 pb-2 text-right font-medium">Cr / section</th>
             <th className="pb-2 text-right font-medium">Total</th>
           </tr>
         </thead>
@@ -55,7 +59,7 @@ export function WorkloadSummary({ summary, onTitleChange }: Props) {
                 </div>
               </td>
               <td className="py-2 pr-3 text-right tabular-nums">{formatCredits(c.creditsPerSection)}</td>
-              <td className="py-2 text-right font-semibold tabular-nums text-slate-900 dark:text-slate-50">
+              <td className="py-2 text-right font-semibold text-slate-900 tabular-nums dark:text-slate-50">
                 {formatCredits(c.totalCredits)}
               </td>
             </tr>
@@ -68,7 +72,7 @@ export function WorkloadSummary({ summary, onTitleChange }: Props) {
             </td>
             <td className="pt-3 text-sm font-medium">{summary.totalSections} sections</td>
             <td className="pt-3 text-right text-xs text-slate-500 uppercase">Total</td>
-            <td className="pt-3 text-right text-lg font-bold tabular-nums text-theory-700 dark:text-theory-100">
+            <td className="text-theory-700 dark:text-theory-100 pt-3 text-right text-lg font-bold tabular-nums">
               {formatCredits(summary.totalCredits)} <span className="text-xs font-medium">credits</span>
             </td>
           </tr>

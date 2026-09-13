@@ -13,7 +13,6 @@
   "dependencies": {
     "docx": "^9.7.1",
     "file-saver": "^2.0.5",
-    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.8",
@@ -27,6 +26,8 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",

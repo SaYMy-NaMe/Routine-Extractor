@@ -85,7 +85,9 @@ describe('parseRoutinePages (Summer 2026 whole routine)', async () => {
     expect(labCol.altLabel).toBe('3:30 PM - 5:30 PM')
     const thu = slotsAt(grid, 'Thu', labCol.id)
     expect(thu.map((s) => `${fullCourseCode(s)} ${s.type} ${s.room}`)).toEqual(['CSE 226.5 lab 115'])
-    const wed = grid.slots.filter((s) => s.day === 'Wed').map((s) => grid.timeSlots.find((t) => t.id === s.slotId)!.label)
+    const wed = grid.slots
+      .filter((s) => s.day === 'Wed')
+      .map((s) => grid.timeSlots.find((t) => t.id === s.slotId)!.label)
     expect(wed).toEqual(['10:00 AM - 11:30 AM', '11:30 AM - 1:00 PM'])
   })
 })

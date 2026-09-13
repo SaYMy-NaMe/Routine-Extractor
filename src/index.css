@@ -49,6 +49,23 @@ body {
     box-shadow: none !important;
     border: none !important;
   }
+  /* Strip the card chrome around the sheet so only the document prints. */
+  .print-sheet-card {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  .print-sheet-card > header {
+    display: none !important;
+  }
+  .print-sheet-card > div {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
   @page {
     size: A4 landscape;
     margin: 8mm;
