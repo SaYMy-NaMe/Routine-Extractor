@@ -14,7 +14,7 @@ import type {
   SessionType,
   TimeSlot,
 } from '../types/routine'
-import { DAYS } from '../types/routine'
+import { DAYS, EVENING_SLOT, defaultFrequency } from '../types/routine'
 import { formatRange, overlapMinutes } from './timeUtils'
 
 /** Standard theory columns used when the PDF gives us nothing better. */
@@ -26,11 +26,7 @@ export const DEFAULT_TIME_SLOTS: TimeSlot[] = [
   ['15:00', '16:30'],
   ['16:30', '18:00'],
   ['18:30', '21:30'],
-].map(([s, e]) => {
-  const startMin = hm(s)
-  const endMin = hm(e)
-  return { id: slotId(startMin, endMin), label: formatRange(startMin, endMin), startMin, endMin }
-})
+].map(([s, e]) => makeTimeSlot(hm(s), hm(e)))
 
 function hm(v: string): number {
   const [h, m] = v.split(':').map(Number)
@@ -42,8 +38,21 @@ export function slotId(startMin: number, endMin: number): string {
 }
 
 export function makeTimeSlot(startMin: number, endMin: number): TimeSlot {
-  return { id: slotId(startMin, endMin), label: formatRange(startMin, endMin), startMin, endMin }
+  const slot: TimeSlot = {
+    id: slotId(startMin, endMin),
+    label: formatRange(startMin, endMin),
+    startMin,
+    endMin,
+  }
+  if (isEveningRange(startMin, endMin)) slot.evening = true
+  return slot
 }
+
+export function isEveningRange(startMin: number, endMin: number): boolean {
+  return startMin === EVENING_SLOT.startMin && endMin === EVENING_SLOT.endMin
+}
+
+export const EVENING_SLOT_ID = slotId(EVENING_SLOT.startMin, EVENING_SLOT.endMin)
 
 let counter = 0
 export function newSlotId(): string {
@@ -125,6 +134,7 @@ export function buildRoutineGrid(cells: ParsedCell[], options: BuildOptions = {}
       endMin: cell.endMin,
       facultyTag: cell.facultyTag,
       source: 'parsed',
+      ...(col.evening ? { frequency: defaultFrequency(type) } : {}),
     })
   }
 
@@ -133,6 +143,7 @@ export function buildRoutineGrid(cells: ParsedCell[], options: BuildOptions = {}
     timeSlots,
     slots,
     offDays: computeOffDays(slots, weekendDays),
+    eveningOff: [],
   }
 }
 
@@ -145,10 +156,15 @@ export function computeOffDays(slots: ScheduleSlot[], weekendDays: DayName[]): R
   return out
 }
 
-/** Columns that contain at least one session (used to hide empty columns). */
+/** Columns that contain at least one session, plus the pinned evening column. */
 export function usedTimeSlots(grid: RoutineGrid): TimeSlot[] {
   const used = new Set(grid.slots.map((s) => s.slotId))
-  return grid.timeSlots.filter((t) => used.has(t.id))
+  return grid.timeSlots.filter((t) => used.has(t.id) || t.evening)
+}
+
+/** Columns to render: every column when `showEmpty`, otherwise only the used ones. */
+export function visibleTimeSlots(grid: RoutineGrid, showEmpty: boolean): TimeSlot[] {
+  return showEmpty ? grid.timeSlots : usedTimeSlots(grid)
 }
 
 /** Sessions for one (day, column) cell, ordered by start time. */

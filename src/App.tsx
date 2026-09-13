@@ -6,15 +6,9 @@ import { RoutineGrid } from './components/RoutineGrid'
 import { RoutineSheet } from './components/RoutineSheet'
 import { WorkloadSummary } from './components/WorkloadSummary'
 import { Card } from './components/ui'
-import { usedTimeSlots } from './services/routineBuilder'
+import { visibleTimeSlots } from './services/routineBuilder'
 import { useRoutineState } from './hooks/useRoutineState'
 import { useTheme } from './hooks/useTheme'
-
-/** The sheet hides empty columns unless the user explicitly wants them. */
-function sheetColumns(grid: NonNullable<ReturnType<typeof useRoutineState>['grid']>, showEmpty: boolean) {
-  const used = usedTimeSlots(grid)
-  return showEmpty || used.length === 0 ? grid.timeSlots : used
-}
 
 function App() {
   const [theme, toggleTheme] = useTheme()
@@ -65,6 +59,7 @@ function App() {
                 onUpsertSlot={state.upsertSlot}
                 onRemoveSlot={state.removeSlot}
                 onSetOffDay={state.setOffDay}
+                onSetEveningOff={state.setEveningOff}
                 onAddTimeSlot={state.addTimeSlot}
                 onRemoveTimeSlot={state.removeTimeSlot}
                 onReset={state.rebuildGrid}
@@ -89,7 +84,7 @@ function App() {
                 data={{
                   profile: state.profile,
                   grid: state.grid,
-                  columns: sheetColumns(state.grid, state.showEmptyColumns),
+                  columns: visibleTimeSlots(state.grid, state.showEmptyColumns),
                   workload: state.workload,
                 }}
               />
@@ -104,7 +99,7 @@ function App() {
                 <RoutineSheet
                   profile={state.profile}
                   grid={state.grid}
-                  columns={sheetColumns(state.grid, state.showEmptyColumns)}
+                  columns={visibleTimeSlots(state.grid, state.showEmptyColumns)}
                   workload={state.workload}
                 />
               </div>

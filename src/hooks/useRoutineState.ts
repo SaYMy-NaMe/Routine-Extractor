@@ -8,7 +8,7 @@ import type {
   ScheduleSlot,
   TimeSlot,
 } from '../types/routine'
-import { DAYS, EMPTY_PROFILE } from '../types/routine'
+import { DAYS, EMPTY_PROFILE, defaultFrequency } from '../types/routine'
 import { filterCellsByFaculty, lookupFacultyName, parseRoutinePages } from '../services/pdfParser'
 import { extractDocxText } from '../services/docxText'
 import { extractPdfText } from '../services/pdfText'
@@ -167,9 +167,38 @@ export function useRoutineState() {
   const upsertSlot = useCallback(
     (slot: ScheduleSlot) =>
       updateGrid((g) => {
-        const exists = g.slots.some((s) => s.id === slot.id)
-        const slots = exists ? g.slots.map((s) => (s.id === slot.id ? slot : s)) : [...g.slots, slot]
-        return { ...g, slots, offDays: mergeOffDays(g.offDays, computeOffDays(slots, weekendDays)) }
+        const column = g.timeSlots.find((t) => t.id === slot.slotId)
+        const next: ScheduleSlot = column?.evening
+          ? { ...slot, frequency: slot.frequency ?? defaultFrequency(slot.type) }
+          : slot
+        const exists = g.slots.some((s) => s.id === next.id)
+        const slots = exists ? g.slots.map((s) => (s.id === next.id ? next : s)) : [...g.slots, next]
+        // A class in the evening cell clears any "off" marker on it.
+        const eveningOff = column?.evening ? g.eveningOff.filter((d) => d !== next.day) : g.eveningOff
+        return {
+          ...g,
+          slots,
+          eveningOff,
+          offDays: mergeOffDays(g.offDays, computeOffDays(slots, weekendDays)),
+        }
+      }),
+    [updateGrid, weekendDays],
+  )
+
+  /** Toggle the "off" marker on a day's evening cell (removes any class in it when set). */
+  const setEveningOff = useCallback(
+    (day: DayName, off: boolean) =>
+      updateGrid((g) => {
+        const evening = g.timeSlots.find((t) => t.evening)
+        const slots =
+          off && evening ? g.slots.filter((s) => !(s.day === day && s.slotId === evening.id)) : g.slots
+        const eveningOff = off ? [...new Set([...g.eveningOff, day])] : g.eveningOff.filter((d) => d !== day)
+        return {
+          ...g,
+          slots,
+          eveningOff,
+          offDays: mergeOffDays(g.offDays, computeOffDays(slots, weekendDays)),
+        }
       }),
     [updateGrid, weekendDays],
   )
@@ -201,11 +230,14 @@ export function useRoutineState() {
 
   const removeTimeSlot = useCallback(
     (id: string) =>
-      updateGrid((g) => ({
-        ...g,
-        timeSlots: g.timeSlots.filter((t) => t.id !== id),
-        slots: g.slots.filter((s) => s.slotId !== id),
-      })),
+      updateGrid((g) => {
+        if (g.timeSlots.find((t) => t.id === id)?.evening) return g // the evening column is pinned
+        return {
+          ...g,
+          timeSlots: g.timeSlots.filter((t) => t.id !== id),
+          slots: g.slots.filter((s) => s.slotId !== id),
+        }
+      }),
     [updateGrid],
   )
 
@@ -222,6 +254,7 @@ export function useRoutineState() {
       endMin: column.endMin,
       facultyTag: profile.searchQuery.toUpperCase(),
       source: 'manual',
+      ...(column.evening ? { frequency: defaultFrequency('theory') } : {}),
     }),
     [profile.searchQuery],
   )
@@ -258,6 +291,7 @@ export function useRoutineState() {
     upsertSlot,
     removeSlot,
     setOffDay,
+    setEveningOff,
     addTimeSlot,
     removeTimeSlot,
     newManualSlot,

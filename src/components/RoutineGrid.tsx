@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { DayName, OffDayStatus, RoutineGrid as Grid, ScheduleSlot, TimeSlot } from '../types/routine'
-import { DAY_LABELS, fullCourseCode } from '../types/routine'
-import { slotsAt, usedTimeSlots } from '../services/routineBuilder'
+import { DAY_LABELS, FREQUENCY_LABELS, fullCourseCode } from '../types/routine'
+import { slotsAt, visibleTimeSlots } from '../services/routineBuilder'
 import { formatRange, fromInputTime } from '../services/timeUtils'
+import { EveningSlotPopover } from './EveningSlotPopover'
 import { SlotEditor } from './SlotEditor'
 import { Button, Input } from './ui'
 
@@ -13,6 +14,7 @@ interface Props {
   onUpsertSlot: (slot: ScheduleSlot) => void
   onRemoveSlot: (id: string) => void
   onSetOffDay: (day: DayName, status: OffDayStatus) => void
+  onSetEveningOff: (day: DayName, off: boolean) => void
   onAddTimeSlot: (startMin: number, endMin: number) => void
   onRemoveTimeSlot: (id: string) => void
   onReset: () => void
@@ -31,18 +33,17 @@ const nextOffDay: Record<OffDayStatus, OffDayStatus> = {
   weekend: 'none',
 }
 
-/** Editable Day × TimeSlot matrix with colour-coded theory/lab chips. */
+type Editing = { slot: ScheduleSlot; isNew: boolean; anchor?: DOMRect } | null
+
+/** Editable Day × TimeSlot matrix with colour-coded theory/lab chips and a pinned evening column. */
 export function RoutineGrid(props: Props) {
   const { grid, showEmptyColumns } = props
-  const [editing, setEditing] = useState<{ slot: ScheduleSlot; isNew: boolean } | null>(null)
+  const [editing, setEditing] = useState<Editing>(null)
+  const [evening, setEvening] = useState<Editing>(null)
   const [addingColumn, setAddingColumn] = useState(false)
-  const [newCol, setNewCol] = useState({ start: '18:30', end: '21:30' })
+  const [newCol, setNewCol] = useState({ start: '08:30', end: '10:00' })
 
-  const columns = useMemo(() => {
-    const used = usedTimeSlots(grid)
-    return showEmptyColumns || used.length === 0 ? grid.timeSlots : used
-  }, [grid, showEmptyColumns])
-
+  const columns = useMemo(() => visibleTimeSlots(grid, showEmptyColumns), [grid, showEmptyColumns])
   const usedIds = useMemo(() => new Set(grid.slots.map((s) => s.slotId)), [grid.slots])
   const manualCount = grid.slots.filter((s) => s.source === 'manual').length
 
@@ -67,7 +68,7 @@ export function RoutineGrid(props: Props) {
           size="sm"
           variant="ghost"
           onClick={props.onReset}
-          title="Discard manual edits and re-extract from the PDF"
+          title="Discard manual edits and re-extract from the file"
         >
           ↺ Re-extract{manualCount ? ` (${manualCount} edited)` : ''}
         </Button>
@@ -123,13 +124,23 @@ export function RoutineGrid(props: Props) {
               {columns.map((c) => (
                 <th
                   key={c.id}
-                  className="group relative border-b border-l border-slate-200 px-2 py-2 text-center font-semibold dark:border-slate-700"
+                  className={`group relative border-b border-l border-slate-200 px-2 py-2 text-center font-semibold dark:border-slate-700 ${
+                    c.evening ? 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200' : ''
+                  }`}
                 >
-                  <div>{c.label}</div>
+                  <div>
+                    {c.evening ? '🌙 ' : ''}
+                    {c.label}
+                  </div>
                   {c.altLabel && (
                     <div className="text-[10px] font-normal normal-case opacity-70">{c.altLabel}</div>
                   )}
-                  {!usedIds.has(c.id) && (
+                  {c.evening && (
+                    <div className="text-[10px] font-normal normal-case opacity-70">
+                      Evening · weekly / alt. week
+                    </div>
+                  )}
+                  {!usedIds.has(c.id) && !c.evening && (
                     <button
                       type="button"
                       onClick={() => props.onRemoveTimeSlot(c.id)}
@@ -166,8 +177,8 @@ export function RoutineGrid(props: Props) {
                       </button>
                     )}
                   </th>
-                  {showBadge ? (
-                    <td colSpan={columns.length} className="px-3 py-4 text-center">
+                  {showBadge && (
+                    <td colSpan={columns.filter((c) => !c.evening).length} className="px-3 py-4 text-center">
                       <button
                         type="button"
                         onClick={() => props.onSetOffDay(day, nextOffDay[off])}
@@ -180,40 +191,58 @@ export function RoutineGrid(props: Props) {
                         {OFF_DAY_LABEL[off]}
                       </button>
                     </td>
-                  ) : (
-                    columns.map((col) => {
-                      const cellSlots = slotsAt(grid, day, col.id)
-                      return (
-                        <td
-                          key={col.id}
-                          className="group border-l border-slate-200 p-1.5 align-top dark:border-slate-700"
-                        >
-                          <div className="flex min-h-14 flex-col gap-1">
-                            {cellSlots.map((s) => (
-                              <SessionChip
-                                key={s.id}
-                                slot={s}
-                                column={col}
-                                onClick={() => setEditing({ slot: s, isNew: false })}
-                              />
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => setEditing({ slot: props.newManualSlot(day, col), isNew: true })}
-                              className={`hover:border-theory-500 hover:text-theory-500 rounded-md border border-dashed border-transparent py-1 text-[11px] text-slate-400 ${
-                                cellSlots.length
-                                  ? 'opacity-0 group-hover:opacity-100'
-                                  : 'flex-1 opacity-0 group-hover:opacity-100'
-                              }`}
-                              aria-label={`Add class on ${DAY_LABELS[day]} at ${col.label}`}
-                            >
-                              + add
-                            </button>
-                          </div>
-                        </td>
-                      )
-                    })
                   )}
+                  {columns.map((col) => {
+                    if (col.evening) {
+                      return (
+                        <EveningCell
+                          key={col.id}
+                          day={day}
+                          column={col}
+                          slots={slotsAt(grid, day, col.id)}
+                          isOff={grid.eveningOff.includes(day)}
+                          editing={evening && evening.slot.day === day ? evening : null}
+                          onOpen={(slot, isNew, anchor) => setEvening({ slot, isNew, anchor })}
+                          onClose={() => setEvening(null)}
+                          newManualSlot={props.newManualSlot}
+                          onUpsertSlot={props.onUpsertSlot}
+                          onRemoveSlot={props.onRemoveSlot}
+                          onSetEveningOff={props.onSetEveningOff}
+                        />
+                      )
+                    }
+                    if (showBadge) return null
+                    const cellSlots = slotsAt(grid, day, col.id)
+                    return (
+                      <td
+                        key={col.id}
+                        className="group border-l border-slate-200 p-1.5 align-top dark:border-slate-700"
+                      >
+                        <div className="flex min-h-14 flex-col gap-1">
+                          {cellSlots.map((s) => (
+                            <SessionChip
+                              key={s.id}
+                              slot={s}
+                              column={col}
+                              onClick={() => setEditing({ slot: s, isNew: false })}
+                            />
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setEditing({ slot: props.newManualSlot(day, col), isNew: true })}
+                            className={`hover:border-theory-500 hover:text-theory-500 rounded-md border border-dashed border-transparent py-1 text-[11px] text-slate-400 ${
+                              cellSlots.length
+                                ? 'opacity-0 group-hover:opacity-100'
+                                : 'flex-1 opacity-0 group-hover:opacity-100'
+                            }`}
+                            aria-label={`Add class on ${DAY_LABELS[day]} at ${col.label}`}
+                          >
+                            + add
+                          </button>
+                        </div>
+                      </td>
+                    )
+                  })}
                 </tr>
               )
             })}
@@ -237,6 +266,93 @@ export function RoutineGrid(props: Props) {
         />
       )}
     </div>
+  )
+}
+
+/* ------------------------------------------------------------------------- */
+/* Evening column cell                                                        */
+/* ------------------------------------------------------------------------- */
+
+interface EveningCellProps {
+  day: DayName
+  column: TimeSlot
+  slots: ScheduleSlot[]
+  isOff: boolean
+  editing: Exclude<Editing, null> | null
+  onOpen: (slot: ScheduleSlot, isNew: boolean, anchor: DOMRect) => void
+  onClose: () => void
+  newManualSlot: Props['newManualSlot']
+  onUpsertSlot: Props['onUpsertSlot']
+  onRemoveSlot: Props['onRemoveSlot']
+  onSetEveningOff: Props['onSetEveningOff']
+}
+
+/**
+ * The 6:30–9:30 PM cell. Unlike day cells it is rendered even on off-days,
+ * and it is edited through an anchored popover with the evening-specific
+ * frequency rules rather than the modal editor.
+ */
+function EveningCell(p: EveningCellProps) {
+  const ref = useRef<HTMLTableCellElement>(null)
+  const rect = () => ref.current!.getBoundingClientRect()
+  const openNew = () => p.onOpen(p.newManualSlot(p.day, p.column), true, rect())
+  return (
+    <td
+      ref={ref}
+      className="group relative border-l border-slate-200 bg-indigo-50/40 p-1.5 align-top dark:border-slate-700 dark:bg-indigo-950/20"
+    >
+      <div className="flex min-h-14 flex-col gap-1">
+        {p.isOff ? (
+          <button
+            type="button"
+            onClick={openNew}
+            title="Evening slot marked off · click to change"
+            className="flex-1 rounded-md border border-dashed border-slate-300 text-[11px] font-bold tracking-widest text-slate-400 dark:border-slate-600"
+          >
+            OFF
+          </button>
+        ) : (
+          <>
+            {p.slots.map((s) => (
+              <SessionChip key={s.id} slot={s} column={p.column} onClick={() => p.onOpen(s, false, rect())} />
+            ))}
+            <button
+              type="button"
+              onClick={openNew}
+              aria-label={`Add evening class on ${DAY_LABELS[p.day]}`}
+              className={`rounded-md border border-dashed border-transparent py-1 text-[11px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 ${
+                p.slots.length
+                  ? 'opacity-0 group-hover:opacity-100'
+                  : 'flex-1 opacity-60 group-hover:opacity-100'
+              }`}
+            >
+              + evening class
+            </button>
+          </>
+        )}
+      </div>
+      {p.editing && (
+        <EveningSlotPopover
+          anchor={p.editing.anchor ?? null}
+          slot={p.editing.slot}
+          isNew={p.editing.isNew}
+          isOff={p.isOff}
+          onSave={(s) => {
+            p.onUpsertSlot(s)
+            p.onClose()
+          }}
+          onClear={(id) => {
+            p.onRemoveSlot(id)
+            p.onClose()
+          }}
+          onMarkOff={(off) => {
+            p.onSetEveningOff(p.day, off)
+            p.onClose()
+          }}
+          onClose={p.onClose}
+        />
+      )}
+    </td>
   )
 }
 
@@ -264,12 +380,19 @@ function SessionChip({
     >
       <div className="flex items-center justify-between gap-1">
         <span className="font-mono text-xs font-bold">{fullCourseCode(slot)}</span>
-        {lab && <span className="bg-lab-500 rounded px-1 text-[9px] font-bold text-white">LAB</span>}
-        {slot.source === 'manual' && <span className="text-[9px] opacity-70">edited</span>}
+        <span className="flex items-center gap-1">
+          {lab && <span className="bg-lab-500 rounded px-1 text-[9px] font-bold text-white">LAB</span>}
+          {column.evening && slot.frequency && (
+            <span className="rounded bg-indigo-500 px-1 text-[9px] font-bold text-white">
+              {FREQUENCY_LABELS[slot.frequency]}
+            </span>
+          )}
+          {slot.source === 'manual' && <span className="text-[9px] opacity-70">edited</span>}
+        </span>
       </div>
       <div className="mt-0.5 flex items-center justify-between text-[11px] opacity-80">
         <span>{slot.room ? `Room ${slot.room}` : 'Room —'}</span>
-        {offGrid && <span>{formatRange(slot.startMin, slot.endMin)}</span>}
+        {offGrid && !column.evening && <span>{formatRange(slot.startMin, slot.endMin)}</span>}
       </div>
     </button>
   )
@@ -285,6 +408,10 @@ function Legend() {
       <span className="flex items-center gap-1.5">
         <span className="border-lab-500/40 bg-lab-100 dark:bg-lab-900/60 h-3 w-3 rounded-sm border" /> Lab ·
         1.5 cr
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-3 w-3 rounded-sm border border-indigo-300 bg-indigo-50 dark:bg-indigo-950/60" />{' '}
+        Evening 6:30–9:30 PM
       </span>
     </div>
   )

@@ -29,6 +29,22 @@ export const CREDITS_PER_SECTION: Record<SessionType, number> = {
   lab: 1.5,
 }
 
+/** How often an evening class meets. Day classes are implicitly weekly. */
+export type ClassFrequency = 'weekly' | 'alternate'
+
+export const FREQUENCY_LABELS: Record<ClassFrequency, string> = {
+  weekly: 'Weekly',
+  alternate: 'Alt. Week',
+}
+
+/** Evening rule: theory meets every week, labs alternate weeks. */
+export function defaultFrequency(type: SessionType): ClassFrequency {
+  return type === 'lab' ? 'alternate' : 'weekly'
+}
+
+/** The dedicated evening block (6:30 PM – 9:30 PM), always present in the grid. */
+export const EVENING_SLOT = { startMin: 18 * 60 + 30, endMin: 21 * 60 + 30 } as const
+
 /** A column of the personal routine grid. Times are minutes since midnight. */
 export interface TimeSlot {
   id: string
@@ -41,6 +57,8 @@ export interface TimeSlot {
    * folded into this column (e.g. "3:30 PM - 5:30 PM").
    */
   altLabel?: string
+  /** The pinned evening column: always rendered, editable via its own popover. */
+  evening?: boolean
 }
 
 /** One class occurrence: a course section taught in a room on a day/slot. */
@@ -63,6 +81,8 @@ export interface ScheduleSlot {
   facultyTag: string
   /** Where this slot came from. Manual edits are never overwritten by re-parsing. */
   source: 'parsed' | 'manual'
+  /** Meeting frequency — only meaningful for evening classes. */
+  frequency?: ClassFrequency
 }
 
 /** Full course code with section, e.g. "CSE 443.2". */
@@ -79,6 +99,8 @@ export interface RoutineGrid {
   slots: ScheduleSlot[]
   /** Days with no sessions are annotated as either a "no class" day or the weekend. */
   offDays: Record<DayName, OffDayStatus>
+  /** Days whose evening cell is explicitly marked as an off slot. */
+  eveningOff: DayName[]
 }
 
 /** Metadata printed in the header/footer of the generated routine. */
