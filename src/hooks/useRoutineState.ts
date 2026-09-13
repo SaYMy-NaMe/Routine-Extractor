@@ -113,16 +113,10 @@ export function useRoutineState() {
     [parse, profile.searchQuery],
   )
 
-  const theoryColumns = useMemo(() => {
-    if (!parse) return []
-    const seen = new Map<string, { startMin: number; endMin: number }>()
-    for (const c of parse.cells) {
-      if (c.tableKind !== 'theory') continue
-      const key = `${c.startMin}-${c.endMin}`
-      if (!seen.has(key)) seen.set(key, { startMin: c.startMin, endMin: c.endMin })
-    }
-    return [...seen.values()]
-  }, [parse])
+  const theoryColumns = useMemo(
+    () => (parse ? parse.columns.filter((c) => c.kind === 'theory') : []),
+    [parse],
+  )
 
   const rebuildGrid = useCallback(() => {
     if (!parse) {

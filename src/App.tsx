@@ -1,9 +1,19 @@
 import { AppHeader } from './components/AppHeader'
 import { FileDropzone } from './components/FileDropzone'
 import { MetadataForm } from './components/MetadataForm'
+import { RoutineGrid } from './components/RoutineGrid'
+import { RoutineSheet } from './components/RoutineSheet'
+import { WorkloadSummary } from './components/WorkloadSummary'
 import { Card } from './components/ui'
+import { usedTimeSlots } from './services/routineBuilder'
 import { useRoutineState } from './hooks/useRoutineState'
 import { useTheme } from './hooks/useTheme'
+
+/** The sheet hides empty columns unless the user explicitly wants them. */
+function sheetColumns(grid: NonNullable<ReturnType<typeof useRoutineState>['grid']>, showEmpty: boolean) {
+  const used = usedTimeSlots(grid)
+  return showEmpty || used.length === 0 ? grid.timeSlots : used
+}
 
 function App() {
   const [theme, toggleTheme] = useTheme()
@@ -38,9 +48,41 @@ function App() {
         </div>
 
         {state.grid && (
-          <Card title="3 · Routine preview" subtitle="Interactive grid coming in the next step">
-            <pre className="overflow-x-auto text-xs">{JSON.stringify(state.grid.slots, null, 1)}</pre>
-          </Card>
+          <>
+            <Card
+              className="no-print"
+              title="3 · Routine matrix"
+              subtitle="Click a class to edit it, hover an empty cell to add one. Edits are kept until you re-extract."
+            >
+              <RoutineGrid
+                grid={state.grid}
+                showEmptyColumns={state.showEmptyColumns}
+                onToggleEmptyColumns={state.setShowEmptyColumns}
+                onUpsertSlot={state.upsertSlot}
+                onRemoveSlot={state.removeSlot}
+                onSetOffDay={state.setOffDay}
+                onAddTimeSlot={state.addTimeSlot}
+                onRemoveTimeSlot={state.removeTimeSlot}
+                onReset={state.rebuildGrid}
+                newManualSlot={state.newManualSlot}
+              />
+            </Card>
+
+            <Card className="no-print" title="4 · Credit workload" subtitle="Theory 3.0 credits per section · Lab 1.5 credits per section">
+              <WorkloadSummary summary={state.workload} onTitleChange={state.setCourseTitle} />
+            </Card>
+
+            <Card className="no-print" title="5 · Print preview" subtitle="Exactly what the exported PDF will look like">
+              <div className="overflow-x-auto">
+                <RoutineSheet
+                  profile={state.profile}
+                  grid={state.grid}
+                  columns={sheetColumns(state.grid, state.showEmptyColumns)}
+                  workload={state.workload}
+                />
+              </div>
+            </Card>
+          </>
         )}
       </main>
     </div>

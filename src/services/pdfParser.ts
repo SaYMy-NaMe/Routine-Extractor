@@ -18,7 +18,7 @@
  * room label (y).
  */
 
-import type { DayName, ParseResult, ParsedCell, SessionType } from '../types/routine'
+import type { DayName, ParseResult, ParsedCell, ParsedColumn, SessionType } from '../types/routine'
 import { DAYS } from '../types/routine'
 import type { PageText, TextItem } from './pdfText'
 import { isTimeRange, parseTimeRange } from './timeUtils'
@@ -310,6 +310,14 @@ export function parseRoutinePages(pages: PageText[]): ParseResult {
     }
   }
 
+  const columnMap = new Map<string, ParsedColumn>()
+  for (const t of tables) {
+    for (const c of t.columns) {
+      const key = `${t.kind}:${c.startMin}-${c.endMin}`
+      if (!columnMap.has(key)) columnMap.set(key, { kind: t.kind, label: c.label, startMin: c.startMin, endMin: c.endMin })
+    }
+  }
+
   if (!tables.length) {
     warnings.push('No routine tables were detected. Is this a text-based (not scanned) routine PDF?')
   }
@@ -318,6 +326,7 @@ export function parseRoutinePages(pages: PageText[]): ParseResult {
     cells: cells.sort(
       (a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.startMin - b.startMin,
     ),
+    columns: [...columnMap.values()].sort((a, b) => a.startMin - b.startMin),
     facultyDirectory,
     semesterHint,
     institutionHint,

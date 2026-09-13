@@ -25,6 +25,14 @@ describe('parseRoutinePages (Summer 2026 whole routine)', async () => {
     expect(result.warnings).toEqual([])
   })
 
+  it('reports the header columns of theory and lab tables', () => {
+    const theory = result.columns.filter((c) => c.kind === 'theory').map((c) => c.label)
+    expect(theory).toEqual(['8.30-10.00', '10.00-11.30', '11.30-1.00', '1.30-3.00', '3.00-4.30', '4.30-6.00'])
+    const lab = result.columns.filter((c) => c.kind === 'lab').map((c) => c.label)
+    expect(lab).toContain('3.30-5.30')
+    expect(lab).toContain('9.00-11.00')
+  })
+
   it('lifts every day table', () => {
     const days = new Set(result.cells.map((c) => c.day))
     expect([...days].sort()).toEqual(['Mon', 'Sat', 'Sun', 'Thu', 'Tue', 'Wed'])
@@ -68,7 +76,7 @@ describe('parseRoutinePages (Summer 2026 whole routine)', async () => {
 
   it('builds the personal grid with folded lab columns and off-day badges', () => {
     const mine = filterCellsByFaculty(result.cells, 'ASHRAF')
-    const grid = buildRoutineGrid(mine)
+    const grid = buildRoutineGrid(mine, { theoryColumns: result.columns.filter((c) => c.kind === 'theory') })
     expect(grid.offDays.Sun).toBe('no-class')
     expect(grid.offDays.Fri).toBe('weekend')
     expect(grid.offDays.Sat).toBe('none')
@@ -77,5 +85,7 @@ describe('parseRoutinePages (Summer 2026 whole routine)', async () => {
     expect(labCol.altLabel).toBe('3:30 PM - 5:30 PM')
     const thu = slotsAt(grid, 'Thu', labCol.id)
     expect(thu.map((s) => `${fullCourseCode(s)} ${s.type} ${s.room}`)).toEqual(['CSE 226.5 lab 115'])
+    const wed = grid.slots.filter((s) => s.day === 'Wed').map((s) => grid.timeSlots.find((t) => t.id === s.slotId)!.label)
+    expect(wed).toEqual(['10:00 AM - 11:30 AM', '11:30 AM - 1:00 PM'])
   })
 })

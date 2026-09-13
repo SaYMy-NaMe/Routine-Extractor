@@ -148,8 +148,18 @@ export interface ParsedCell {
   page: number
 }
 
+/** A time-slot column found in a table header. */
+export interface ParsedColumn {
+  kind: SessionType
+  label: string
+  startMin: number
+  endMin: number
+}
+
 export interface ParseResult {
   cells: ParsedCell[]
+  /** Distinct header columns across all tables (theory and lab). */
+  columns: ParsedColumn[]
   /** Short form → full name, from the "Faculty Members" table when present. */
   facultyDirectory: Record<string, string>
   /** Best-effort header hints ("Summer 2026", "East Delta University"). */

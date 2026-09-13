@@ -61,15 +61,23 @@ export function inferSessionType(cell: ParsedCell): SessionType {
   return 'theory'
 }
 
-/** Pick the grid column for a session: the theory column it overlaps most. */
+/**
+ * Pick the grid column for a session: an exact match, otherwise the column it
+ * overlaps most (ties broken by the closest start time).
+ */
 export function chooseColumn(slots: TimeSlot[], startMin: number, endMin: number): TimeSlot | null {
+  const exact = slots.find((s) => s.startMin === startMin && s.endMin === endMin)
+  if (exact) return exact
   let best: TimeSlot | null = null
   let bestOverlap = 0
+  let bestDist = Infinity
   for (const s of slots) {
     const o = overlapMinutes(s, { startMin, endMin })
-    if (o > bestOverlap) {
+    const d = Math.abs(s.startMin - startMin)
+    if (o > bestOverlap || (o === bestOverlap && o > 0 && d < bestDist)) {
       best = s
       bestOverlap = o
+      bestDist = d
     }
   }
   return best
