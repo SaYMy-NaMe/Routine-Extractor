@@ -1,32 +1,18 @@
-# React + TypeScript + Vite
+# Faculty Routine Extractor & Generator
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Drop a departmental routine PDF, search for a faculty short form (e.g. `ASHRAF`),
+and get a clean personal weekly routine with a credit-workload summary —
+exportable as **PDF**, **DOCX**, or **iCal (.ics)**. Everything runs in the browser;
+no file ever leaves your machine.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Vite · React 19 · TypeScript · Tailwind CSS v4 · pdfjs-dist · jsPDF + html2canvas · docx
 
-## React Compiler 
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration 
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm run dev      # start dev server
+npm run build    # type-check + production build
+npm run lint     # oxlint
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
