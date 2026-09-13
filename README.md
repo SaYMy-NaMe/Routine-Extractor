@@ -1,6 +1,6 @@
 # Faculty Routine Extractor & Generator
 
-Drop the departmental routine PDF, type a faculty short form (e.g. `ASHRAF`), and get a
+Drop the departmental routine (PDF or Word .docx), type a faculty short form (e.g. `ASHRAF`), and get a
 clean personal weekly routine with a credit-workload summary — exportable as **PDF** or
 **DOCX**. Everything runs in the browser; the PDF never leaves your machine.
 
@@ -8,7 +8,8 @@ clean personal weekly routine with a credit-workload summary — exportable as *
 
 ## How it works
 
-1. **Parse** — `pdfjs-dist` extracts positioned text from the PDF. `src/services/pdfParser.ts`
+1. **Parse** — `pdfjs-dist` extracts positioned text from a PDF; `src/services/docxText.ts` walks the
+   OpenXML tables of a `.docx` and lays them out as the same positioned text. `src/services/pdfParser.ts`
    detects day headings, "Theory / Lab Classes" sections and time-slot header rows, then snaps
    every cell to its room (y) and time column (x). Tables that continue across pages are handled.
 2. **Filter** — cells are matched on the faculty short form (exact token match, with a substring
@@ -49,8 +50,8 @@ N607  |            |            | CSE 112.9 | CSE 112.7
       |            |            | FARJANA   | ASHRAF
 ```
 
-Word routines must be exported to PDF first (File → Save As → PDF). In-cell time overrides such
-as `CSE 215.1 (11.30-1.30)` are honoured.
+Both the Word master file and its PDF export are accepted. In-cell time overrides such as
+`CSE 215.1 (11.30-1.30)` are honoured.
 
 ## Validation
 

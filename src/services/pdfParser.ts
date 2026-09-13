@@ -262,6 +262,17 @@ export function parseRoutinePages(pages: PageText[]): ParseResult {
 
       if (!table) continue
 
+      // A foreign heading ("Exam Routine") or a non-time header row ("Day 1 | Day 2 | …")
+      // ends the current table so its rows don't get glued onto the routine matrix.
+      if (/\bexam\b/i.test(text) && line.items.length <= 2) {
+        table = null
+        continue
+      }
+      if (line.items.filter((i) => /^(day|week)\s*\d+$/i.test(i.str.trim())).length >= 2) {
+        table = null
+        continue
+      }
+
       // Data line: split into room labels vs cell items.
       for (const it of line.items) {
         const centre = it.x + it.width / 2
@@ -323,7 +334,9 @@ export function parseRoutinePages(pages: PageText[]): ParseResult {
   }
 
   if (!tables.length) {
-    warnings.push('No routine tables were detected. Is this a text-based (not scanned) routine PDF?')
+    warnings.push(
+      'No routine tables were detected. Is this the text-based (not scanned) departmental routine?',
+    )
   }
 
   return {

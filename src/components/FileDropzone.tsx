@@ -8,7 +8,7 @@ interface Props {
   onReset: () => void
 }
 
-/** Drag-and-drop (or click-to-browse) PDF upload with parse status feedback. */
+/** Drag-and-drop (or click-to-browse) PDF/DOCX upload with parse status feedback. */
 export function FileDropzone({ status, onFile, onReset }: Props) {
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -40,7 +40,7 @@ export function FileDropzone({ status, onFile, onReset }: Props) {
     <div
       role="button"
       tabIndex={0}
-      aria-label="Upload routine PDF"
+      aria-label="Upload routine file"
       onClick={() => inputRef.current?.click()}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -59,7 +59,7 @@ export function FileDropzone({ status, onFile, onReset }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf,.pdf"
+        accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
         className="hidden"
         onChange={(e) => {
           handleFiles(e.target.files)
@@ -71,10 +71,10 @@ export function FileDropzone({ status, onFile, onReset }: Props) {
         <>
           <UploadIcon className="text-theory-500 mb-3 h-10 w-10" />
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-            Drop the departmental routine PDF here
+            Drop the departmental routine here
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            or click to browse · text-based PDF only · processed locally in your browser
+            PDF or Word (.docx) · or click to browse · processed locally in your browser
           </p>
         </>
       )}
@@ -94,7 +94,8 @@ export function FileDropzone({ status, onFile, onReset }: Props) {
           <CheckIcon className="text-lab-500 mb-3 h-10 w-10" />
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{status.fileName}</p>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-            {status.pageCount} page{status.pageCount === 1 ? '' : 's'} · {status.cellCount} class cells found
+            {status.pageCount} {status.format === 'docx' ? 'table' : 'page'}
+            {status.pageCount === 1 ? '' : 's'} · {status.cellCount} class cells found
           </p>
           <Button
             size="sm"

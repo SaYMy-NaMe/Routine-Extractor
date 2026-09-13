@@ -10,6 +10,7 @@ import type {
 } from '../types/routine'
 import { DAYS, EMPTY_PROFILE } from '../types/routine'
 import { filterCellsByFaculty, lookupFacultyName, parseRoutinePages } from '../services/pdfParser'
+import { extractDocxText } from '../services/docxText'
 import { extractPdfText } from '../services/pdfText'
 import { buildRoutineGrid, computeOffDays, makeTimeSlot, newSlotId } from '../services/routineBuilder'
 import { computeWorkload } from '../services/workloadCalculator'
@@ -17,7 +18,7 @@ import { computeWorkload } from '../services/workloadCalculator'
 export type FileStatus =
   | { kind: 'idle' }
   | { kind: 'parsing'; fileName: string }
-  | { kind: 'ready'; fileName: string; pageCount: number; cellCount: number }
+  | { kind: 'ready'; fileName: string; format: 'pdf' | 'docx'; pageCount: number; cellCount: number }
   | { kind: 'error'; fileName: string; message: string }
 
 const PROFILE_KEY = 'fre-profile'
@@ -30,6 +31,14 @@ function loadProfile(): FacultyProfile {
     /* ignore */
   }
   return EMPTY_PROFILE
+}
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+function detectFileKind(file: File): 'pdf' | 'docx' | null {
+  if (/\.docx$/i.test(file.name) || file.type === DOCX_MIME) return 'docx'
+  if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') return 'pdf'
+  return null
 }
 
 /** Strip "Mr."/"Dr." style honorifics from directory names for the headline. */
@@ -67,16 +76,17 @@ export function useRoutineState() {
     const seq = ++parseSeq.current
     setStatus({ kind: 'parsing', fileName: file.name })
     try {
-      if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
-        throw new Error('Please drop a PDF file. Word documents must be exported to PDF first.')
-      }
-      const pages = await extractPdfText(await file.arrayBuffer())
+      const kind = detectFileKind(file)
+      if (!kind) throw new Error('Unsupported file. Please drop the routine as a .pdf or .docx file.')
+      const bytes = await file.arrayBuffer()
+      const pages = kind === 'docx' ? await extractDocxText(bytes) : await extractPdfText(bytes)
       const result = parseRoutinePages(pages)
       if (seq !== parseSeq.current) return
       setParse(result)
       setStatus({
         kind: 'ready',
         fileName: file.name,
+        format: kind,
         pageCount: result.pageCount,
         cellCount: result.cells.length,
       })
@@ -84,7 +94,7 @@ export function useRoutineState() {
         setStatus({
           kind: 'error',
           fileName: file.name,
-          message: result.warnings[0] ?? 'No routine matrix found in this PDF.',
+          message: result.warnings[0] ?? 'No routine matrix found in this file.',
         })
       }
     } catch (err) {
@@ -92,7 +102,7 @@ export function useRoutineState() {
       setStatus({
         kind: 'error',
         fileName: file.name,
-        message: err instanceof Error ? err.message : 'Could not read this PDF.',
+        message: err instanceof Error ? err.message : 'Could not read this file.',
       })
     }
   }, [])

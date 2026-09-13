@@ -26,7 +26,10 @@ function App() {
 
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
         <div className="no-print grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-          <Card title="1 · Routine PDF" subtitle="The whole-department routine published by the office">
+          <Card
+            title="1 · Master routine file"
+            subtitle="The whole-department routine (.pdf or .docx) published by the office"
+          >
             <FileDropzone status={state.status} onFile={state.loadFile} onReset={state.reset} />
             {state.parse?.warnings.length ? (
               <ul className="mt-3 space-y-1 text-xs text-amber-700 dark:text-amber-300">
