@@ -42,7 +42,8 @@ export function validateProfile(p: FacultyProfile): ProfileErrors {
 
 /** Strip "Mr."/"Dr." style honorifics from directory names for the headline. */
 export function cleanPersonName(name: string): string {
-  return name.replace(/^(mr|mrs|ms|dr|prof|engr|md)\.?\s+/i, '').trim()
+  // Tolerates a missing space after the dot ("Mr.Mehedi"), but never eats a name that merely starts with "Md".
+  return name.replace(/^(mr|mrs|ms|dr|prof|engr|md)(\.\s*|\s+)/i, '').trim()
 }
 
 /** Coerce unknown (e.g. persisted) data into a valid profile. */

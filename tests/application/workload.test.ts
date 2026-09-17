@@ -50,7 +50,7 @@ describe('computeWorkload', () => {
     expect(describeCourseLine(w.courses[0])).toBe(
       'CSE 443: Neural Network and Fuzzy Logics: 3 Credits * 3 Sections = 9 Credits',
     )
-    expect(formatSections(w.courses[1])).toBe('3 (sec. n/a, 5, 6)')
+    expect(formatSections(w.courses[1])).toBe('3 (Section N/A, 5, 6)')
   })
 
   it('counts a section once even when it meets several times a week', () => {

@@ -5,6 +5,7 @@ import {
   type TimeSlot,
   formatRange,
   fullCourseCode,
+  orNA,
   sessionTiming,
 } from '../../../domain'
 import { cx } from '../../components/ui'
@@ -49,7 +50,7 @@ export const SessionChip = memo(function SessionChip({ slot, column, onClick }: 
         </span>
       </div>
       <div className="mt-0.5 flex items-center justify-between text-[11px] opacity-80">
-        <span>{slot.room ? `Room ${slot.room}` : 'Room —'}</span>
+        <span>Room {orNA(slot.room)}</span>
         {timing && <span className={lab ? 'font-semibold' : undefined}>{timing}</span>}
       </div>
     </button>

@@ -1,15 +1,27 @@
 /**
- * DOCX exporter: an editable Word table built with the `docx` library,
+ * DOCX exporter — an editable Word document with a structured, executive
+ * layout: dark header row with white labels, fixed column widths (a wider
+ * break column), padded cells, zebra rows, merged lab-through-break blocks,
+ * a styled workload table and a page-numbered footer. The `docx` library is
  * imported lazily so it never weighs on the initial bundle.
  */
 
-import type { Paragraph as ParagraphT, Table as TableT } from 'docx'
+import type {
+  ITableCellOptions,
+  Paragraph as ParagraphT,
+  Table as TableT,
+  TableCell as TableCellT,
+} from 'docx'
 import {
   type DayName,
   DAY_LABELS,
+  NOT_AVAILABLE,
+  type ScheduleSlot,
   type TimeSlot,
   formatCredits,
+  formatSectionCount,
   formatSections,
+  orNA,
   sessionLabel,
   sessionTiming,
 } from '../../domain'
@@ -19,6 +31,7 @@ import {
   breakWaived,
   emptyDayView,
   isEveningOff,
+  rowLayout,
   slotsAt,
   visibleDays,
 } from '../../application'
@@ -34,12 +47,26 @@ import {
   routineTitle,
 } from './template'
 
+const FONT = 'Calibri'
+const DARK = '1F2937'
+const GRID = 'E2E8F0'
+const ZEBRA = 'FAFAFC'
+const ACCENT = '3B6EF5'
+const BREAK_WEIGHT = 0.62
+
+const PAGE_W = 16838 // A4 landscape, DXA
+const PAGE_H = 11906
+const MARGIN = 680
+const DAY_W = 1400
+
 export async function buildDocxBlob(data: ExportData): Promise<Blob> {
   const {
     AlignmentType,
     BorderStyle,
     Document,
+    Footer,
     Packer,
+    PageNumber,
     PageOrientation,
     Paragraph,
     ShadingType,
@@ -50,72 +77,114 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
     VerticalAlign,
     WidthType,
   } = await import('docx')
+
   const { profile, grid, columns, workload, emptyDay } = data
-  const border = { style: BorderStyle.SINGLE, size: 4, color: '9CA3AF' }
+  const tableW = PAGE_W - 2 * MARGIN
+  const weight = (c: TimeSlot) => (c.isBreak ? BREAK_WEIGHT : 1)
+  const unit = (tableW - DAY_W) / (columns.reduce((n, c) => n + weight(c), 0) || 1)
+  const widthOf = (c: TimeSlot) => Math.floor(unit * weight(c))
+  const spanWidth = (cols: readonly TimeSlot[]) => cols.reduce((n, c) => n + widthOf(c), 0)
+
+  const border = { style: BorderStyle.SINGLE, size: 4, color: GRID }
   const borders = { top: border, bottom: border, left: border, right: border }
-  const pageW = 16838 // A4 landscape width in DXA
-  const margin = 720
-  const tableW = pageW - 2 * margin
-  const dayW = 1300
-  const BREAK_WEIGHT = 0.45
-  const totalWeight = columns.reduce((n, c) => n + (c.isBreak ? BREAK_WEIGHT : 1), 0) || 1
-  const unit = (tableW - dayW) / totalWeight
-  const widthOf = (c: TimeSlot) => Math.floor(unit * (c.isBreak ? BREAK_WEIGHT : 1))
 
-  const centered = (text: string, opts: { bold?: boolean; size?: number; color?: string } = {}) =>
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 40 },
-      children: [
-        new TextRun({ text, bold: opts.bold, size: opts.size ?? 20, color: opts.color, font: 'Arial' }),
-      ],
+  const run = (
+    text: string,
+    o: { bold?: boolean; italics?: boolean; size?: number; color?: string; spacing?: number } = {},
+  ) =>
+    new TextRun({
+      text,
+      bold: o.bold,
+      italics: o.italics,
+      size: o.size ?? 18,
+      color: o.color,
+      characterSpacing: o.spacing,
+      font: FONT,
     })
-
-  const cell = (children: ParagraphT[], opts: { width: number; fill?: string; span?: number }) =>
+  const para = (
+    text: string,
+    o: {
+      bold?: boolean
+      italics?: boolean
+      size?: number
+      color?: string
+      spacing?: number
+      after?: number
+      align?: 'center' | 'left'
+    } = {},
+  ) =>
+    new Paragraph({
+      alignment: o.align === 'left' ? AlignmentType.LEFT : AlignmentType.CENTER,
+      spacing: { after: o.after ?? 30 },
+      children: [run(text, o)],
+    })
+  const cell = (
+    children: ParagraphT[],
+    o: { width: number; fill?: string; span?: number; pad?: number; borders?: ITableCellOptions['borders'] },
+  ): TableCellT =>
     new TableCell({
       children,
-      borders,
-      width: { size: opts.width, type: WidthType.DXA },
-      columnSpan: opts.span,
+      borders: o.borders ?? borders,
+      width: { size: o.width, type: WidthType.DXA },
+      columnSpan: o.span,
       verticalAlign: VerticalAlign.CENTER,
-      shading: opts.fill ? { fill: opts.fill, type: ShadingType.CLEAR, color: 'auto' } : undefined,
-      margins: { top: 60, bottom: 60, left: 60, right: 60 },
+      shading: o.fill ? { fill: o.fill, type: ShadingType.CLEAR, color: 'auto' } : undefined,
+      margins: { top: o.pad ?? 80, bottom: o.pad ?? 80, left: 90, right: 90 },
     })
 
+  /* ---- header row ------------------------------------------------------- */
   const headerRow = new TableRow({
     tableHeader: true,
     children: [
-      cell([centered('DAY / TIME', { bold: true, size: 15 })], { width: dayW, fill: HEX.headBg }),
-      ...columns.map((c) =>
-        cell(
+      cell([para('DAY / TIME', { bold: true, size: 15, color: 'F3F4F6', spacing: 20 })], {
+        width: DAY_W,
+        fill: DARK,
+      }),
+      ...columns.map((c) => {
+        const tint = c.evening ? HEX.eveningInk : c.isBreak ? HEX.weekendInk : 'F3F4F6'
+        const sub = c.altLabel ?? (c.evening ? 'Evening' : c.isBreak ? '1:00 - 1:30 PM' : undefined)
+        return cell(
           [
-            centered(c.label, {
-              bold: true,
-              size: 16,
-              color: c.evening ? HEX.eveningInk : c.isBreak ? HEX.weekendInk : undefined,
-            }),
-            ...(c.altLabel ? [centered(c.altLabel, { size: 14, color: '4B5563' })] : []),
-            ...(c.evening ? [centered('Evening', { size: 14, color: '4B5563' })] : []),
-            ...(c.isBreak ? [centered('1:00 - 1:30 PM', { size: 13, color: '4B5563' })] : []),
+            para(c.label, { bold: true, size: 16, color: tint }),
+            ...(sub ? [para(sub, { size: 13, color: c.evening || c.isBreak ? tint : 'CBD5E1' })] : []),
           ],
-          { width: widthOf(c), fill: c.evening ? HEX.eveningBg : c.isBreak ? HEX.weekendBg : HEX.headBg },
-        ),
-      ),
+          { width: widthOf(c), fill: c.evening ? HEX.eveningBg : c.isBreak ? HEX.weekendBg : DARK },
+        )
+      }),
     ],
   })
 
-  const dayCols = columns.filter((c) => !c.evening)
-  const eveningCols = columns.filter((c) => c.evening)
+  /* ---- body cells --------------------------------------------------------- */
+  const sessionParas = (s: ScheduleSlot, c: TimeSlot, merged: boolean): ParagraphT[] => {
+    const lab = s.type === 'lab'
+    const ink = lab ? HEX.labInk : HEX.theoryInk
+    const timing = sessionTiming(s)
+    return [
+      para(sessionLabel(s, c), { bold: true, size: 18, color: ink }),
+      para(`Room ${orNA(s.room)}`, { size: 14, color: ink }),
+      ...(timing
+        ? [para(merged ? `${timing} · merged with break` : timing, { bold: true, size: 13, color: ink })]
+        : []),
+    ]
+  }
 
-  const sessionCell = (day: DayName, c: TimeSlot) => {
+  const bodyCell = (
+    day: DayName,
+    c: TimeSlot,
+    slot: ScheduleSlot | undefined,
+    span: number,
+    cols: readonly TimeSlot[],
+    zebra: boolean,
+  ): TableCellT => {
     if (c.isBreak) {
       const waived = breakWaived(grid, day)
       return cell(
         [
-          centered(waived ? '—' : 'BREAK', {
+          para(waived ? NOT_AVAILABLE : 'BREAK', {
             bold: !waived,
             size: 13,
             color: waived ? '9CA3AF' : HEX.weekendInk,
+            spacing: waived ? 0 : 30,
           }),
         ],
         {
@@ -125,43 +194,40 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
       )
     }
     if (isEveningOff(grid, day, c)) {
-      return cell([centered(OFF_CELL_TEXT, { bold: true, size: 14, color: '9CA3AF' })], {
+      return cell([para(OFF_CELL_TEXT, { bold: true, size: 14, color: '9CA3AF', spacing: 30 })], {
         width: widthOf(c),
         fill: HEX.eveningBg,
       })
     }
-    const sessions = slotsAt(grid, day, c.id)
-    const paras = sessions.flatMap((s) => {
-      const lab = s.type === 'lab'
-      return [
-        centered(sessionLabel(s, c), { bold: true, size: 18, color: lab ? HEX.labInk : HEX.theoryInk }),
-        ...(s.room ? [centered(s.room, { size: 15, color: lab ? HEX.labInk : HEX.theoryInk })] : []),
-        // Labs always print their explicit timing.
-        ...(sessionTiming(s)
-          ? [centered(sessionTiming(s)!, { bold: true, size: 14, color: HEX.labInk })]
-          : []),
-      ]
-    })
-    const only = sessions.length === 1 ? sessions[0] : null
-    return cell(paras.length ? paras : [new Paragraph('')], {
-      width: widthOf(c),
-      fill: only ? (only.type === 'lab' ? HEX.labBg : HEX.theoryBg) : c.evening ? HEX.eveningBg : undefined,
+    const fillColor = slot
+      ? slot.type === 'lab'
+        ? HEX.labBg
+        : HEX.theoryBg
+      : c.evening
+        ? HEX.eveningBg
+        : zebra
+          ? ZEBRA
+          : undefined
+    return cell(slot ? sessionParas(slot, c, span > 1) : [new Paragraph('')], {
+      width: spanWidth(cols),
+      fill: fillColor,
+      span: span > 1 ? span : undefined,
     })
   }
 
-  const bodyRows = visibleDays(grid, emptyDay).map((day) => {
+  const dayCols = columns.filter((c) => !c.evening)
+  const eveningCols = columns.filter((c) => c.evening)
+
+  const bodyRows = visibleDays(grid, emptyDay).map((day, i) => {
+    const zebra = i % 2 === 1
     const badge = emptyDayView(grid, day, emptyDay)
-    const dayCell = cell(
-      [centered(DAY_LABELS[day].slice(0, 3), { bold: true, size: badge?.collapsed ? 14 : 18 })],
-      {
-        width: dayW,
-        fill: HEX.headBg,
-      },
-    )
+    const dayCell = cell([para(DAY_LABELS[day].slice(0, 3), { bold: true, size: 18 })], {
+      width: DAY_W,
+      fill: 'F1F5F9',
+    })
     if (badge) {
       const style = emptyDay.badges[badge.kind]
-      const span = badge.spansEvening ? columns.length : dayCols.length
-      const accent = { style: BorderStyle.SINGLE, size: 24, color: hexDigits(style.borderColor) }
+      const spanned = badge.spansEvening ? columns : dayCols
       const edge =
         style.border === 'solid' || style.border === 'dashed'
           ? {
@@ -170,139 +236,162 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
               color: hexDigits(style.borderColor),
             }
           : undefined
-      const badgeCell = new TableCell({
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { before: badge.collapsed ? 0 : 40, after: badge.collapsed ? 0 : 40 },
-            children: [
-              new TextRun({
-                text: badgeTextFor(style, 'docx'),
-                bold: style.bold,
-                italics: style.italic,
-                characterSpacing: style.wideTracking ? 40 : 0,
-                size: badge.collapsed ? 13 : 16,
-                color: hexDigits(style.color),
-                font: 'Arial',
-              }),
-            ],
+      const accent = { style: BorderStyle.SINGLE, size: 24, color: hexDigits(style.borderColor) }
+      const badgeCell = cell(
+        [
+          para(badgeTextFor(style, 'docx'), {
+            bold: style.bold,
+            italics: style.italic,
+            size: 16,
+            color: hexDigits(style.color),
+            spacing: style.wideTracking ? 40 : 0,
           }),
         ],
-        borders: {
-          ...borders,
-          ...(edge ? { top: edge, bottom: edge, left: edge, right: edge } : {}),
-          ...(style.border === 'accent' ? { left: accent } : {}),
+        {
+          width: spanWidth(spanned),
+          span: spanned.length,
+          fill: hexDigits(style.background),
+          borders: {
+            ...borders,
+            ...(edge ? { top: edge, bottom: edge, left: edge, right: edge } : {}),
+            ...(style.border === 'accent' ? { left: accent } : {}),
+          },
         },
-        width: {
-          size: (badge.spansEvening ? columns : dayCols).reduce((n, col) => n + widthOf(col), 0),
-          type: WidthType.DXA,
-        },
-        columnSpan: span,
-        verticalAlign: VerticalAlign.CENTER,
-        shading: { fill: hexDigits(style.background), type: ShadingType.CLEAR, color: 'auto' },
-        margins: { top: 40, bottom: 40, left: 60, right: 60 },
-      })
+      )
       return new TableRow({
         children: [
           dayCell,
           badgeCell,
-          ...(badge.spansEvening ? [] : eveningCols.map((c) => sessionCell(day, c))),
+          ...(badge.spansEvening
+            ? []
+            : eveningCols.map((c) => bodyCell(day, c, slotsAt(grid, day, c.id)[0], 1, [c], zebra))),
         ],
       })
     }
     return new TableRow({
       children: [
         dayCell,
-        ...dayCols.map((c) => sessionCell(day, c)),
-        ...eveningCols.map((c) => sessionCell(day, c)),
+        ...rowLayout(grid, day, columns).map((rc) =>
+          bodyCell(day, rc.column, rc.slot, rc.span, rc.columns, zebra),
+        ),
       ],
     })
   })
 
+  /* ---- document ----------------------------------------------------------- */
   const children: (ParagraphT | TableT)[] = [
-    centered(routineTitle(profile), { bold: true, size: 30 }),
-    new Paragraph({ spacing: { after: 120 } }),
-    centered(profile.fullName || 'Faculty Name', { bold: true, size: 24 }),
-    ...headerLines(profile).map((l) => centered(l, { size: 19, color: '4B5563' })),
+    para(routineTitle(profile), { bold: true, size: 34, after: 40 }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 160 },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: ACCENT, space: 1 } },
+      children: [run(' ', { size: 4 })],
+    }),
+    para(profile.fullName || NOT_AVAILABLE, { bold: true, size: 26, after: 40 }),
+    ...headerLines(profile).map((l) => para(l, { size: 19, color: '4B5563' })),
   ]
   const contact = contactLine(profile)
-  if (contact) children.push(centered(contact, { size: 18, color: '4B5563' }))
-  children.push(new Paragraph({ spacing: { after: 200 } }))
+  if (contact) children.push(para(contact, { size: 18, color: '4B5563' }))
+  children.push(new Paragraph({ spacing: { after: 220 } }))
   children.push(
     new Table({
       width: { size: tableW, type: WidthType.DXA },
-      columnWidths: [dayW, ...columns.map(widthOf)],
+      columnWidths: [DAY_W, ...columns.map(widthOf)],
       rows: [headerRow, ...bodyRows],
     }),
   )
+
   if (workload.courses.length) {
-    children.push(new Paragraph({ spacing: { after: 200 } }))
-    children.push(centered('Workload Summary', { bold: true, size: 22 }))
-    children.push(new Paragraph({ spacing: { after: 60 } }))
-    const wlWidths = [1600, 5200, 1200, 3800, 1600, 1600]
-    const wlRow = (cells: string[], opts: { bold?: boolean; fill?: string } = {}) =>
+    children.push(new Paragraph({ spacing: { after: 240 } }))
+    children.push(para('Workload Summary', { bold: true, size: 22, after: 40, align: 'left' }))
+    const wlWidths = [1700, 5200, 1300, 3900, 1600, 1740]
+    const wlRow = (cells: string[], o: { head?: boolean; total?: boolean; zebra?: boolean } = {}) =>
       new TableRow({
+        tableHeader: o.head,
         children: cells.map((t, i) =>
-          cell([centered(t, { bold: opts.bold, size: 17 })], { width: wlWidths[i], fill: opts.fill }),
+          cell(
+            [
+              para(t, {
+                bold: o.head || o.total,
+                size: 17,
+                color: o.head ? 'F3F4F6' : undefined,
+                align: i === 1 ? 'left' : 'center',
+              }),
+            ],
+            {
+              width: wlWidths[i],
+              fill: o.head ? DARK : o.total ? HEX.theoryBg : o.zebra ? ZEBRA : undefined,
+              pad: 60,
+            },
+          ),
         ),
       })
     children.push(
       new Table({
         width: { size: wlWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
         columnWidths: wlWidths,
-        alignment: AlignmentType.CENTER,
         rows: [
-          wlRow([...WORKLOAD_HEADERS], {
-            bold: true,
-            fill: HEX.headBg,
-          }),
-          ...workload.courses.map((c) =>
-            wlRow([
-              c.courseCode,
-              c.title || '—',
-              c.type === 'lab' ? 'Lab' : 'Theory',
-              formatSections(c),
-              formatCredits(c.creditsPerSection),
-              formatCredits(c.totalCredits),
-            ]),
+          wlRow([...WORKLOAD_HEADERS], { head: true }),
+          ...workload.courses.map((c, i) =>
+            wlRow(
+              [
+                c.courseCode,
+                orNA(c.title),
+                c.type === 'lab' ? 'Lab' : 'Theory',
+                formatSections(c),
+                formatCredits(c.creditsPerSection),
+                formatCredits(c.totalCredits),
+              ],
+              { zebra: i % 2 === 1 },
+            ),
           ),
           wlRow(
             [
               'Total Workload',
               '',
               '',
-              `${workload.totalSections} sections`,
+              formatSectionCount(workload.totalSections),
               '',
               `${formatCredits(workload.totalCredits)} Credits`,
             ],
-            {
-              bold: true,
-              fill: HEX.headBg,
-            },
+            { total: true },
           ),
         ],
       }),
     )
-    children.push(new Paragraph({ spacing: { after: 80 } }))
-    children.push(
-      centered(EVENING_LEGEND, {
-        size: 15,
-        color: '4B5563',
-      }),
-    )
   }
+
+  const footer = new Footer({
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        border: { top: { style: BorderStyle.SINGLE, size: 4, color: GRID, space: 4 } },
+        children: [
+          run(
+            `${[profile.fullName, profile.institution].filter(Boolean).join(' · ') || NOT_AVAILABLE}   ·   ${EVENING_LEGEND}   ·   Page `,
+            { size: 14, color: '6B7280' },
+          ),
+          new TextRun({ children: [PageNumber.CURRENT], size: 14, color: '6B7280', font: FONT }),
+          run(' of ', { size: 14, color: '6B7280' }),
+          new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 14, color: '6B7280', font: FONT }),
+        ],
+      }),
+    ],
+  })
 
   const doc = new Document({
     creator: profile.fullName || 'Faculty Routine Extractor',
     title: `${routineTitle(profile)} – ${profile.fullName}`,
+    styles: { default: { document: { run: { font: FONT, size: 18 } } } },
     sections: [
       {
         properties: {
           page: {
-            size: { orientation: PageOrientation.LANDSCAPE, width: pageW, height: 11906 },
-            margin: { top: margin, bottom: margin, left: margin, right: margin },
+            size: { orientation: PageOrientation.LANDSCAPE, width: PAGE_W, height: PAGE_H },
+            margin: { top: MARGIN, bottom: MARGIN + 200, left: MARGIN, right: MARGIN },
           },
         },
+        footers: { default: footer },
         children,
       },
     ],

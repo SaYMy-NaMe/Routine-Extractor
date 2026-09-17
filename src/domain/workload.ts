@@ -52,9 +52,21 @@ export function formatCredits(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }
 
-/** "3 (sec. 1, 2, 3)" — section count with the section numbers, for summary tables. */
+/** Placeholder for any missing or empty value, in the UI and in every export. */
+export const NOT_AVAILABLE = 'N/A'
+
+/** `value` or the N/A placeholder when it is empty. */
+export const orNA = (value: string | null | undefined): string =>
+  value && value.trim() ? value : NOT_AVAILABLE
+
+/** "3 (Section 1, 2, 3)" — section count with the section numbers, for summary tables. */
 export function formatSections(c: CourseWorkload): string {
-  return `${c.sections.length} (sec. ${c.sections.map((s) => s || 'n/a').join(', ')})`
+  return `${c.sections.length} (Section ${c.sections.map((s) => s || NOT_AVAILABLE).join(', ')})`
+}
+
+/** "7 Sections" */
+export function formatSectionCount(n: number): string {
+  return `${n} Section${n === 1 ? '' : 's'}`
 }
 
 /** "3 Credits * 3 Sections = 9 Credits" */

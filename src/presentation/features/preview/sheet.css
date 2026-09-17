@@ -164,7 +164,8 @@
   font-size: 10px;
 }
 .sheet__th--break {
-  width: 64px;
+  width: 92px;
+  min-width: 92px;
   background: #fffbeb !important;
   color: #92400e;
 }
@@ -182,6 +183,9 @@
 }
 .sheet__timing {
   font-weight: 600;
+}
+.sheet__cell--merged {
+  background: #f4fbf7;
 }
 .sheet__th--evening {
   background: var(--evening-bg) !important;

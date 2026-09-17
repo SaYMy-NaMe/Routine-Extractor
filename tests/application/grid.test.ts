@@ -5,6 +5,7 @@ import {
   buildRoutineGrid,
   freeColumns,
   gridReducer,
+  rowLayout,
   usedTimeSlots,
 } from '../../src/application'
 import { EVENING_RANGE, EVENING_SLOT_ID, type ScheduleSlot } from '../../src/domain'
@@ -151,5 +152,33 @@ describe('daily break', () => {
     // The 11:30–1:30 lab still lands in the 11:30–1:00 column, never in the break column.
     const sat = grid.slots.find((s) => s.day === 'Sat')!
     expect(grid.timeSlots.find((t) => t.id === sat.slotId)!.label).toBe('11:30 AM - 1:00 PM')
+  })
+})
+
+describe('rowLayout (cell merging)', () => {
+  it('merges an 11:30–1:30 lab across the 11:30 column and the break', () => {
+    const { grid } = buildRoutine([
+      makeCell('Sat', 690, 810, 'CSE 224', '3', '105', 'lab'),
+      makeCell('Sat', 900, 990, 'CSE 443', '3', 'N604'),
+    ])
+    const cols = usedTimeSlots(grid)
+    const cells = rowLayout(grid, 'Sat', cols)
+    const lab = cells.find((c) => c.slot?.courseCode === 'CSE 224')!
+    expect(lab.span).toBe(2)
+    expect(lab.columns.map((c) => c.label)).toEqual(['11:30 AM - 1:00 PM', 'Break'])
+    // The absorbed break column is not emitted again, and totals still cover every column.
+    expect(cells.some((c) => c.column.isBreak)).toBe(false)
+    expect(cells.reduce((n, c) => n + c.span, 0)).toBe(cols.length)
+  })
+
+  it('does not merge theory classes or labs that end at 1:00', () => {
+    const { grid } = buildRoutine([
+      makeCell('Mon', 690, 810, 'CSE 215', '1', '110'), // theory 11:30–1:30
+      makeCell('Tue', 690, 780, 'CSE 226', '5', '115', 'lab'), // lab ending 1:00
+    ])
+    const cols = usedTimeSlots(grid)
+    expect(rowLayout(grid, 'Mon', cols).every((c) => c.span === 1)).toBe(true)
+    expect(rowLayout(grid, 'Tue', cols).every((c) => c.span === 1)).toBe(true)
+    expect(rowLayout(grid, 'Mon', cols).some((c) => c.column.isBreak)).toBe(true)
   })
 })

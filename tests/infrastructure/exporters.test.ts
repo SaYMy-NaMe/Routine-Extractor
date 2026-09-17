@@ -112,4 +112,56 @@ describe('exporters', () => {
     expect(badgeTextFor(custom.emptyDay.badges['no-class'], 'pdf')).toBe('Free day')
     expect(badgeTextFor({ ...custom.emptyDay.badges['no-class'], text: '☺ ✨' }, 'pdf')).toBe('No Class')
   })
+
+  it('merges a lab through the break in the DOCX and uses Section / N/A conventions', async () => {
+    const merged = buildRoutineGrid([makeCell('Sat', 690, 810, 'CSE 224', '3', '', 'lab')])
+    const d: ExportData = {
+      ...data,
+      grid: merged,
+      columns: usedTimeSlots(merged),
+      workload: computeWorkload(merged.slots),
+    }
+    const blob = await new DocxExporter().build(d)
+    const { unzipSync } = await import('fflate')
+    const files = unzipSync(new Uint8Array(await blob.arrayBuffer()))
+    const xml = new TextDecoder().decode(files['word/document.xml'])
+    const text = [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join(' | ')
+    expect(xml).toContain('<w:gridSpan w:val="2"/>')
+    expect(text).toContain('11:30 AM - 1:30 PM · merged with break')
+    expect(text).toContain('Room N/A')
+    expect(text).toContain('1 (Section 3)')
+    expect(text).toContain('1 Section')
+    expect(text).not.toMatch(/\bsec\b|n\/a/)
+    expect(files['word/footer1.xml']).toBeDefined()
+  })
+
+  it('keeps the PDF single-page for a full week and paginates the workload only when it must', () => {
+    const week = buildRoutineGrid(
+      (['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'] as const).flatMap((day) => [
+        makeCell(day, 600, 690, 'CSE 111', '1', '101'),
+        makeCell(day, 930, 1050, 'CSE 112', '1', '102', 'lab'),
+      ]),
+    )
+    const d: ExportData = {
+      ...data,
+      grid: week,
+      columns: usedTimeSlots(week),
+      workload: computeWorkload(week.slots),
+    }
+    expect(
+      drawRoutinePdf(new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }), d).getNumberOfPages(),
+    ).toBe(1)
+    const many = {
+      ...d,
+      workload: {
+        ...d.workload,
+        courses: Array.from({ length: 14 }, (_, i) => ({
+          ...d.workload.courses[0],
+          courseCode: `CSE ${100 + i}`,
+        })),
+      },
+    }
+    const doc = drawRoutinePdf(new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }), many)
+    expect(doc.getNumberOfPages()).toBe(2)
+  })
 })

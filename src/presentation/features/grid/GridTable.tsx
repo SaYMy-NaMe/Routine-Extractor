@@ -8,7 +8,14 @@ import {
   type ScheduleSlot,
   type TimeSlot,
 } from '../../../domain'
-import { breakWaived, emptyDayView, isEveningOff, slotsAt, visibleDays } from '../../../application'
+import {
+  breakWaived,
+  emptyDayView,
+  isEveningOff,
+  rowLayout,
+  slotsAt,
+  visibleDays,
+} from '../../../application'
 import { cx } from '../../components/ui'
 import { EmptyDayBadge } from './EmptyDayBadge'
 import { SessionChip } from './SessionChip'
@@ -63,7 +70,8 @@ export function GridTable(p: Props) {
                 className={cx(
                   'group relative border-b border-l border-slate-200 px-2 py-2 text-center font-semibold dark:border-slate-700',
                   c.evening && 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200',
-                  c.isBreak && 'w-20 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
+                  c.isBreak &&
+                    'w-28 min-w-28 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
                 )}
               >
                 <div>
@@ -131,33 +139,43 @@ export function GridTable(p: Props) {
                     />
                   </td>
                 )}
-                {columns.map((col) =>
-                  col.isBreak ? (
-                    badge ? null : (
-                      <BreakCell key={col.id} waived={breakWaived(grid, day)} />
+                {badge
+                  ? columns.map((col) =>
+                      col.evening && !badge.spansEvening ? (
+                        <EveningCell
+                          key={col.id}
+                          day={day}
+                          column={col}
+                          grid={grid}
+                          onOpen={p.onOpenEvening}
+                          newManualSlot={p.newManualSlot}
+                        />
+                      ) : null,
                     )
-                  ) : col.evening ? (
-                    badge?.spansEvening ? null : (
-                      <EveningCell
-                        key={col.id}
-                        day={day}
-                        column={col}
-                        grid={grid}
-                        onOpen={p.onOpenEvening}
-                        newManualSlot={p.newManualSlot}
-                      />
-                    )
-                  ) : badge ? null : (
-                    <DayCell
-                      key={col.id}
-                      day={day}
-                      column={col}
-                      occupant={slotsAt(grid, day, col.id)[0]}
-                      onOpen={p.onOpenDay}
-                      newManualSlot={p.newManualSlot}
-                    />
-                  ),
-                )}
+                  : rowLayout(grid, day, columns).map((cell) =>
+                      cell.column.isBreak ? (
+                        <BreakCell key={cell.column.id} waived={breakWaived(grid, day)} />
+                      ) : cell.column.evening ? (
+                        <EveningCell
+                          key={cell.column.id}
+                          day={day}
+                          column={cell.column}
+                          grid={grid}
+                          onOpen={p.onOpenEvening}
+                          newManualSlot={p.newManualSlot}
+                        />
+                      ) : (
+                        <DayCell
+                          key={cell.column.id}
+                          day={day}
+                          column={cell.column}
+                          occupant={cell.slot}
+                          span={cell.span}
+                          onOpen={p.onOpenDay}
+                          newManualSlot={p.newManualSlot}
+                        />
+                      ),
+                    )}
               </tr>
             )
           })}
@@ -192,13 +210,21 @@ interface DayCellProps {
   day: DayName
   column: TimeSlot
   occupant: ScheduleSlot | undefined
+  /** Columns merged into this cell (a lab through the break spans 2). */
+  span: number
   onOpen: (open: CellOpen) => void
   newManualSlot: Props['newManualSlot']
 }
 
-function DayCell({ day, column, occupant, onOpen, newManualSlot }: DayCellProps) {
+function DayCell({ day, column, occupant, span, onOpen, newManualSlot }: DayCellProps) {
   return (
-    <td className="group border-l border-slate-200 p-1.5 align-top dark:border-slate-700">
+    <td
+      colSpan={span}
+      className={cx(
+        'group border-l border-slate-200 p-1.5 align-top dark:border-slate-700',
+        span > 1 && 'bg-lab-50/40 dark:bg-lab-900/10',
+      )}
+    >
       <div className="flex min-h-14 flex-col">
         {occupant ? (
           <SessionChip

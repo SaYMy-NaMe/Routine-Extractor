@@ -5,7 +5,7 @@ member, and get a clean personal weekly routine with a credit-workload summary �
 grid and exportable as a single-page **PDF** or an editable **DOCX**. Parsing and rendering run
 entirely in the browser.
 
-![Vite](https://img.shields.io/badge/Vite-React%2019-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38bdf8) ![Tests](https://img.shields.io/badge/vitest-60%20passing-brightgreen)
+![Vite](https://img.shields.io/badge/Vite-React%2019-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38bdf8) ![Tests](https://img.shields.io/badge/vitest-64%20passing-brightgreen)
 
 ## Scripts
 
@@ -27,20 +27,25 @@ npx prettier --write .
 2. **Faculty initial** — the search term is strictly the faculty initial (`ASHRAF`, `MHN`); the
    combobox ranks directory matches by exact initial, then prefix. An unambiguous match
    **auto-fills Full name, School and Institution** only; designation and every other field stay
-   your own input. Clearing the initial immediately **erases** those three auto-filled fields.
+   your own input. An explicit listener on the input (`useFacultyInitial`) resets those three
+   fields to empty strings the moment the initial is cleared or backspaced empty.
 3. **Grid** — sessions are projected onto Day × Time. **Each cell holds exactly one class**: the
    builder keeps the first parsed class per cell (and tells you how many were skipped), editors
    only offer free cells, and the reducer refuses to stack. Lab blocks fold into the theory column
    they overlap and **labs always print their explicit start–end timing**; a fixed
-   **1:00 – 1:30 PM Break** column is laid out every day and automatically **waived on days where a
-   lab runs through it** (e.g. 11:30 AM – 1:30 PM); the `6:30 PM – 9:30 PM` evening column is
+   **1:00 – 1:30 PM Break** column is laid out every day, and a lab that runs through it
+   (e.g. 11:30 AM – 1:30 PM) **merges into one block spanning the 11:30 column and the break** —
+   in the grid, the print preview, the PDF and the DOCX alike; the `6:30 PM – 9:30 PM` evening column is
    always present (theory = weekly, lab = alternating weeks); empty days show a full-width
    "No Class On this day" / "Weekend" badge.
    Toolbar: layout **Scale**, **+ Time slot**, **Reset**. Layout is automatic — cards on phones,
    a table on larger screens.
 4. **Workload** — 3 credits per theory section, 1.5 per lab section; a section counts once.
-5. **Export** — vector PDF (jsPDF) or editable DOCX, both sharing one template with the on-screen
-   print sheet.
+5. **Export** — vector PDF (jsPDF) or editable DOCX in an executive layout: dark header band with
+   time badges, subtle grid lines, zebra rows, padded chips, merged lab blocks, a styled workload
+   table and page-numbered footers. The PDF fits one page whenever it can (rows shrink towards a
+   minimum height) and otherwise breaks cleanly — rows never split and the workload table moves to
+   its own page. Text conventions everywhere: "Section" (never "sec") and "N/A" for missing values.
 
 ### Where routines are stored
 
@@ -108,7 +113,7 @@ src/
 
 - **Functionality** — the ASHRAF Summer 2026 schedule is asserted cell-for-cell from both the PDF
   and the DOCX fixture; the 21-credit benchmark, occupancy rule, lookup ranking, sniffing and
-  library behaviour, break waiving and lookup auto-erase are unit-tested (60 tests).
+  library behaviour, break waiving, cell merging, export conventions and lookup auto-erase are unit-tested (64 tests).
 - **Usability** — responsive from 360 px phones to desktops, keyboard-accessible combobox and
   dialogs, ARIA live regions, toast feedback, dark mode.
 - **Reliability** — three-layer import validation with user-facing `ImportError`s, defensive

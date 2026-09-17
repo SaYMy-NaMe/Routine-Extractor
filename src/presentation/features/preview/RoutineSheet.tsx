@@ -2,10 +2,14 @@ import { memo } from 'react'
 import {
   DAY_LABELS,
   type DayName,
+  NOT_AVAILABLE,
+  type ScheduleSlot,
   type TimeSlot,
   badgeDisplayText,
   formatCredits,
   formatSections,
+  formatSectionCount,
+  orNA,
   sessionLabel,
   sessionTiming,
 } from '../../../domain'
@@ -14,6 +18,7 @@ import {
   breakWaived,
   emptyDayView,
   isEveningOff,
+  rowLayout,
   slotsAt,
   visibleDays,
 } from '../../../application'
@@ -39,29 +44,38 @@ export const RoutineSheet = memo(function RoutineSheet({ data }: Props) {
   const eveningColumns = columns.filter((c) => c.evening)
   const contact = contactLine(profile)
 
-  const cell = (day: DayName, col: TimeSlot) =>
-    col.isBreak ? (
+  const cell = (day: DayName, col: TimeSlot, slot: ScheduleSlot | undefined, span: number) => {
+    if (col.isBreak) {
+      const waived = breakWaived(grid, day)
+      return (
+        <td key={col.id} className={`sheet__cell sheet__break ${waived ? 'sheet__break--waived' : ''}`}>
+          {waived ? NOT_AVAILABLE : 'BREAK'}
+        </td>
+      )
+    }
+    if (isEveningOff(grid, day, col)) {
+      return (
+        <td key={col.id} className="sheet__cell sheet__cell--evening sheet__offcell">
+          {OFF_CELL_TEXT}
+        </td>
+      )
+    }
+    return (
       <td
         key={col.id}
-        className={`sheet__cell sheet__break ${breakWaived(grid, day) ? 'sheet__break--waived' : ''}`}
+        colSpan={span}
+        className={`sheet__cell ${col.evening ? 'sheet__cell--evening' : ''} ${span > 1 ? 'sheet__cell--merged' : ''}`}
       >
-        {breakWaived(grid, day) ? '—' : 'BREAK'}
-      </td>
-    ) : isEveningOff(grid, day, col) ? (
-      <td key={col.id} className="sheet__cell sheet__cell--evening sheet__offcell">
-        {OFF_CELL_TEXT}
-      </td>
-    ) : (
-      <td key={col.id} className={`sheet__cell ${col.evening ? 'sheet__cell--evening' : ''}`}>
-        {slotsAt(grid, day, col.id).map((s) => (
-          <span key={s.id} className={`sheet__chip ${s.type === 'lab' ? 'sheet__chip--lab' : ''}`}>
-            <b>{sessionLabel(s, col)}</b>
-            {s.room && <small>{s.room}</small>}
-            {sessionTiming(s) && <small className="sheet__timing">{sessionTiming(s)}</small>}
+        {slot && (
+          <span className={`sheet__chip ${slot.type === 'lab' ? 'sheet__chip--lab' : ''}`}>
+            <b>{sessionLabel(slot, col)}</b>
+            <small>{orNA(slot.room)}</small>
+            {sessionTiming(slot) && <small className="sheet__timing">{sessionTiming(slot)}</small>}
           </span>
-        ))}
+        )}
       </td>
     )
+  }
 
   return (
     <article className="sheet print-sheet" aria-label="Routine sheet preview">
@@ -114,9 +128,11 @@ export const RoutineSheet = memo(function RoutineSheet({ data }: Props) {
                     </span>
                   </td>
                 ) : (
-                  dayColumns.map((col) => cell(day, col))
+                  rowLayout(grid, day, dayColumns).map((c) => cell(day, c.column, c.slot, c.span))
                 )}
-                {badge?.spansEvening ? null : eveningColumns.map((col) => cell(day, col))}
+                {badge?.spansEvening
+                  ? null
+                  : eveningColumns.map((col) => cell(day, col, slotsAt(grid, day, col.id)[0], 1))}
               </tr>
             )
           })}
@@ -138,7 +154,7 @@ export const RoutineSheet = memo(function RoutineSheet({ data }: Props) {
                 <td>
                   <b>{c.courseCode}</b>
                 </td>
-                <td className="sheet__wl-title">{c.title || '—'}</td>
+                <td className="sheet__wl-title">{orNA(c.title)}</td>
                 <td>{c.type === 'lab' ? 'Lab' : 'Theory'}</td>
                 <td>{formatSections(c)}</td>
                 <td>{formatCredits(c.creditsPerSection)}</td>
@@ -151,7 +167,7 @@ export const RoutineSheet = memo(function RoutineSheet({ data }: Props) {
           <tfoot>
             <tr>
               <td colSpan={3}>Total Workload</td>
-              <td>{workload.totalSections} sections</td>
+              <td>{formatSectionCount(workload.totalSections)}</td>
               <td />
               <td>
                 <b>{formatCredits(workload.totalCredits)} Credits</b>

@@ -10,7 +10,7 @@ import type {
   TimeSlot,
   WorkloadSummary,
 } from '../../domain'
-import type { FileLike } from '../../application'
+import type { AutoFillFields, FileLike } from '../../application'
 import type { RoutineState } from './routineState'
 
 export interface RoutineActions {
@@ -23,6 +23,10 @@ export interface RoutineActions {
   deleteRoutine(id: string): Promise<void>
   refreshLibrary(): Promise<void>
   patchProfile(patch: Partial<FacultyProfile>): void
+  /** Fill the lookup-owned fields from a resolved initial. */
+  applyAutoFill(tag: string, fields: AutoFillFields): void
+  /** Reset the lookup-owned fields to empty strings. */
+  eraseAutoFill(keys: readonly (keyof FacultyProfile)[]): void
   setCourseTitle(courseCode: string, title: string): void
   setWeekendDays(days: readonly DayName[]): void
   /** Discard manual edits and rebuild the grid from the active routine. */

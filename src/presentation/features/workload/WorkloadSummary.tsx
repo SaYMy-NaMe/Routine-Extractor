@@ -1,4 +1,4 @@
-import { type WorkloadSummary as Summary, formatCredits } from '../../../domain'
+import { type WorkloadSummary as Summary, formatCredits, formatSectionCount } from '../../../domain'
 import { Badge, inputClass } from '../../components/ui'
 
 interface Props {
@@ -36,8 +36,7 @@ export function WorkloadSummary({ summary, onTitleChange }: Props) {
             />
             <div className="mt-2 flex items-center justify-between text-sm">
               <span className="text-slate-500">
-                {c.sections.length} section{c.sections.length === 1 ? '' : 's'} ×{' '}
-                {formatCredits(c.creditsPerSection)}
+                {formatSectionCount(c.sections.length)} × {formatCredits(c.creditsPerSection)}
               </span>
               <span className="font-semibold">{formatCredits(c.totalCredits)} cr</span>
             </div>
@@ -100,8 +99,8 @@ export function WorkloadSummary({ summary, onTitleChange }: Props) {
 
       <div className="flex items-center justify-between border-t-2 border-slate-200 pt-3 dark:border-slate-700">
         <span className="text-xs text-slate-500">
-          {summary.courses.length} course{summary.courses.length === 1 ? '' : 's'} · {summary.totalSections}{' '}
-          sections
+          {summary.courses.length} course{summary.courses.length === 1 ? '' : 's'} ·{' '}
+          {formatSectionCount(summary.totalSections)}
         </span>
         <span className="text-theory-700 dark:text-theory-100 text-lg font-bold tabular-nums">
           {formatCredits(summary.totalCredits)} <span className="text-xs font-medium">credits</span>

@@ -17,5 +17,7 @@ describe('profile', () => {
   it('strips honorifics', () => {
     expect(cleanPersonName('Mr. Ashrafur Rahman Chowdhury')).toBe('Ashrafur Rahman Chowdhury')
     expect(cleanPersonName('Dr Jane')).toBe('Jane')
+    expect(cleanPersonName('Mr.Mehedi Hasan Jony')).toBe('Mehedi Hasan Jony')
+    expect(cleanPersonName('Mdx Person')).toBe('Mdx Person')
   })
 })

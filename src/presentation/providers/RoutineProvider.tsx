@@ -15,9 +15,7 @@ import {
   buildRoutine,
   computeWorkload,
   filterCellsByFaculty,
-  AUTO_FILL_KEYS,
   newSlotId,
-  resolveFaculty,
 } from '../../application'
 import { useServices } from '../hooks/useServices'
 import { RoutineContext, type RoutineActions, type RoutineContextValue } from './routineContext'
@@ -189,19 +187,6 @@ export function RoutineProvider({ children }: { children: ReactNode }) {
     storage.set(PROFILE_KEY, state.profile)
   }, [storage, state.profile])
 
-  // Reactive lookup: an exact initial fills name/school/institution; clearing the initial erases them.
-  useEffect(() => {
-    const initial = profile.searchQuery.trim()
-    if (!initial) {
-      if (state.autoFilledTag) dispatch({ type: 'profile/autoErased', keys: AUTO_FILL_KEYS })
-      return
-    }
-    if (!parse) return
-    const match = resolveFaculty(parse, initial)
-    if (!match || match.entry.shortForm === state.autoFilledTag) return
-    dispatch({ type: 'profile/autoFilled', tag: match.entry.shortForm, patch: match.fields })
-  }, [parse, profile.searchQuery, state.autoFilledTag])
-
   /* ---- actions ------------------------------------------------------------- */
 
   const actions = useMemo<RoutineActions>(
@@ -216,6 +201,8 @@ export function RoutineProvider({ children }: { children: ReactNode }) {
       deleteRoutine,
       refreshLibrary,
       patchProfile: (patch) => dispatch({ type: 'profile/patch', patch }),
+      applyAutoFill: (tag, fields) => dispatch({ type: 'profile/autoFilled', tag, patch: fields }),
+      eraseAutoFill: (keys) => dispatch({ type: 'profile/autoErased', keys }),
       setCourseTitle: (courseCode, title) => dispatch({ type: 'titles/set', courseCode, title }),
       setWeekendDays: (days) => dispatch({ type: 'weekend/set', days }),
       resetGrid,

@@ -92,3 +92,45 @@ export const manualEditCount = (grid: RoutineGrid): number =>
 
 export const distinctCourses = (grid: RoutineGrid): string[] =>
   [...new Set(grid.slots.map((s) => s.courseCode))].sort()
+
+/* ------------------------------------------------------------------------- */
+/* Row layout (cell merging)                                                  */
+/* ------------------------------------------------------------------------- */
+
+/** One rendered cell of a day row: a column, the session in it, and how many columns it spans. */
+export interface RowCell {
+  readonly column: TimeSlot
+  readonly slot: ScheduleSlot | undefined
+  /** Columns absorbed to the right (a lab running 11:30 AM – 1:30 PM spans the break column too). */
+  readonly span: number
+  /** Ordered columns this cell covers (length === span). */
+  readonly columns: readonly TimeSlot[]
+}
+
+/**
+ * Lay out one day's cells over the visible columns. A session absorbs the
+ * following columns it runs through entirely, as long as they are break
+ * columns or empty — so a lab from 11:30 AM to 1:30 PM renders as one block
+ * across "11:30 AM – 1:00 PM" and the break, with its explicit timing.
+ */
+export function rowLayout(grid: RoutineGrid, day: DayName, columns: readonly TimeSlot[]): RowCell[] {
+  const cells: RowCell[] = []
+  let i = 0
+  while (i < columns.length) {
+    const column = columns[i]
+    const slot = column.isBreak ? undefined : slotsAt(grid, day, column.id)[0]
+    let span = 1
+    // Only labs merge: the break is waived (and absorbed) solely for a lab that runs through it.
+    if (slot && slot.type === 'lab') {
+      while (i + span < columns.length) {
+        const next = columns[i + span]
+        const absorbable = next.isBreak || (!next.evening && slotsAt(grid, day, next.id).length === 0)
+        if (!absorbable || slot.endMin < next.endMin) break
+        span += 1
+      }
+    }
+    cells.push({ column, slot, span, columns: columns.slice(i, i + span) })
+    i += span
+  }
+  return cells
+}

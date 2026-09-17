@@ -1,6 +1,7 @@
 import { useMemo, type ChangeEvent } from 'react'
 import { type FacultyDirectoryEntry, type FacultyProfile, validateProfile } from '../../../domain'
 import { Field, Input } from '../../components/ui'
+import { useFacultyInitial } from '../../hooks/useFacultyInitial'
 import { FacultySearch } from './FacultySearch'
 
 interface Props {
@@ -56,6 +57,7 @@ export function MetadataForm({
   autoFilledFields,
 }: Props) {
   const errors = useMemo(() => validateProfile(profile), [profile])
+  const initial = useFacultyInitial()
   const set = (key: keyof FacultyProfile) => (e: ChangeEvent<HTMLInputElement>) =>
     onChange({ [key]: e.target.value })
 
@@ -74,9 +76,9 @@ export function MetadataForm({
           <FacultySearch
             id={id}
             describedBy={describedBy}
-            value={profile.searchQuery}
+            value={initial.value}
             directory={directory}
-            onChange={(searchQuery) => onChange({ searchQuery })}
+            onChange={initial.onChange}
           />
         )}
       </Field>

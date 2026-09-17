@@ -44,6 +44,7 @@ describe('routineReducer', () => {
       { type: 'profile/autoErased', keys: ['fullName', 'school', 'institution'] },
     )
     expect(erased.profile).toMatchObject({ fullName: '', school: '', institution: '' })
+    expect(erased.profile.title).toBe(EMPTY_PROFILE.title) // designation is never touched
     expect(erased.autoFilledTag).toBeNull()
     expect(s.profile.fullName).toBe('A')
     expect(routineReducer(s, { type: 'grid/removeTimeSlot', id: 'missing' })).toBe(s)
