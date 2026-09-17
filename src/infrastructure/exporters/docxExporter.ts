@@ -11,10 +11,12 @@ import {
   formatCredits,
   formatSections,
   sessionLabel,
+  sessionTiming,
 } from '../../domain'
 import {
   type ExportData,
   type RoutineExporter,
+  breakWaived,
   emptyDayView,
   isEveningOff,
   slotsAt,
@@ -55,7 +57,10 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
   const margin = 720
   const tableW = pageW - 2 * margin
   const dayW = 1300
-  const colW = Math.floor((tableW - dayW) / Math.max(columns.length, 1))
+  const BREAK_WEIGHT = 0.45
+  const totalWeight = columns.reduce((n, c) => n + (c.isBreak ? BREAK_WEIGHT : 1), 0) || 1
+  const unit = (tableW - dayW) / totalWeight
+  const widthOf = (c: TimeSlot) => Math.floor(unit * (c.isBreak ? BREAK_WEIGHT : 1))
 
   const centered = (text: string, opts: { bold?: boolean; size?: number; color?: string } = {}) =>
     new Paragraph({
@@ -84,11 +89,16 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
       ...columns.map((c) =>
         cell(
           [
-            centered(c.label, { bold: true, size: 16, color: c.evening ? HEX.eveningInk : undefined }),
+            centered(c.label, {
+              bold: true,
+              size: 16,
+              color: c.evening ? HEX.eveningInk : c.isBreak ? HEX.weekendInk : undefined,
+            }),
             ...(c.altLabel ? [centered(c.altLabel, { size: 14, color: '4B5563' })] : []),
             ...(c.evening ? [centered('Evening', { size: 14, color: '4B5563' })] : []),
+            ...(c.isBreak ? [centered('1:00 - 1:30 PM', { size: 13, color: '4B5563' })] : []),
           ],
-          { width: colW, fill: c.evening ? HEX.eveningBg : HEX.headBg },
+          { width: widthOf(c), fill: c.evening ? HEX.eveningBg : c.isBreak ? HEX.weekendBg : HEX.headBg },
         ),
       ),
     ],
@@ -98,9 +108,25 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
   const eveningCols = columns.filter((c) => c.evening)
 
   const sessionCell = (day: DayName, c: TimeSlot) => {
+    if (c.isBreak) {
+      const waived = breakWaived(grid, day)
+      return cell(
+        [
+          centered(waived ? '—' : 'BREAK', {
+            bold: !waived,
+            size: 13,
+            color: waived ? '9CA3AF' : HEX.weekendInk,
+          }),
+        ],
+        {
+          width: widthOf(c),
+          fill: waived ? undefined : HEX.weekendBg,
+        },
+      )
+    }
     if (isEveningOff(grid, day, c)) {
       return cell([centered(OFF_CELL_TEXT, { bold: true, size: 14, color: '9CA3AF' })], {
-        width: colW,
+        width: widthOf(c),
         fill: HEX.eveningBg,
       })
     }
@@ -110,11 +136,15 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
       return [
         centered(sessionLabel(s, c), { bold: true, size: 18, color: lab ? HEX.labInk : HEX.theoryInk }),
         ...(s.room ? [centered(s.room, { size: 15, color: lab ? HEX.labInk : HEX.theoryInk })] : []),
+        // Labs always print their explicit timing.
+        ...(sessionTiming(s)
+          ? [centered(sessionTiming(s)!, { bold: true, size: 14, color: HEX.labInk })]
+          : []),
       ]
     })
     const only = sessions.length === 1 ? sessions[0] : null
     return cell(paras.length ? paras : [new Paragraph('')], {
-      width: colW,
+      width: widthOf(c),
       fill: only ? (only.type === 'lab' ? HEX.labBg : HEX.theoryBg) : c.evening ? HEX.eveningBg : undefined,
     })
   }
@@ -163,7 +193,10 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
           ...(edge ? { top: edge, bottom: edge, left: edge, right: edge } : {}),
           ...(style.border === 'accent' ? { left: accent } : {}),
         },
-        width: { size: colW * span, type: WidthType.DXA },
+        width: {
+          size: (badge.spansEvening ? columns : dayCols).reduce((n, col) => n + widthOf(col), 0),
+          type: WidthType.DXA,
+        },
         columnSpan: span,
         verticalAlign: VerticalAlign.CENTER,
         shading: { fill: hexDigits(style.background), type: ShadingType.CLEAR, color: 'auto' },
@@ -198,7 +231,7 @@ export async function buildDocxBlob(data: ExportData): Promise<Blob> {
   children.push(
     new Table({
       width: { size: tableW, type: WidthType.DXA },
-      columnWidths: [dayW, ...columns.map(() => colW)],
+      columnWidths: [dayW, ...columns.map(widthOf)],
       rows: [headerRow, ...bodyRows],
     }),
   )

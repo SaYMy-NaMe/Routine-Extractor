@@ -2,13 +2,14 @@
  * Read-only queries over a `RoutineGrid`.
  */
 
-import type {
-  DayName,
-  EmptyDayKind,
-  EmptyDaySettings,
-  RoutineGrid,
-  ScheduleSlot,
-  TimeSlot,
+import {
+  type DayName,
+  type EmptyDayKind,
+  type EmptyDaySettings,
+  type RoutineGrid,
+  type ScheduleSlot,
+  type TimeSlot,
+  coversBreak,
 } from '../../domain'
 
 /** Sessions for one (day, column) cell, ordered by start time. */
@@ -24,13 +25,18 @@ export function slotsAt(grid: RoutineGrid, day: DayName, slotId: string): Schedu
  */
 export function usedTimeSlots(grid: RoutineGrid): TimeSlot[] {
   const used = new Set(grid.slots.map((s) => s.slotId))
-  return grid.timeSlots.filter((t) => used.has(t.id) || t.evening || t.pinned)
+  return grid.timeSlots.filter((t) => used.has(t.id) || t.evening || t.pinned || t.isBreak)
 }
 
 /** Columns a new session can still go into on a given day (one class per cell). */
 export function freeColumns(grid: RoutineGrid, day: DayName, excludeId?: string): TimeSlot[] {
   const taken = new Set(grid.slots.filter((s) => s.day === day && s.id !== excludeId).map((s) => s.slotId))
-  return grid.timeSlots.filter((t) => !taken.has(t.id))
+  return grid.timeSlots.filter((t) => !taken.has(t.id) && !t.isBreak)
+}
+
+/** The 1:00–1:30 PM break is waived on a day when a lab runs through it (e.g. 11:30 AM – 1:30 PM). */
+export function breakWaived(grid: RoutineGrid, day: DayName): boolean {
+  return grid.slots.some((s) => s.day === day && s.type === 'lab' && coversBreak(s))
 }
 
 /** Is the (day, column) cell an explicitly marked-off evening slot? */

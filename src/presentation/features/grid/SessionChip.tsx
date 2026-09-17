@@ -5,6 +5,7 @@ import {
   type TimeSlot,
   formatRange,
   fullCourseCode,
+  sessionTiming,
 } from '../../../domain'
 import { cx } from '../../components/ui'
 
@@ -17,7 +18,12 @@ interface Props {
 /** Colour-coded session pill used by both the table and the card views. */
 export const SessionChip = memo(function SessionChip({ slot, column, onClick }: Props) {
   const lab = slot.type === 'lab'
-  const offGrid = !column.evening && (slot.startMin !== column.startMin || slot.endMin !== column.endMin)
+  // Labs always carry their explicit timing; theory only when it departs from the column.
+  const timing =
+    sessionTiming(slot) ??
+    (!column.evening && (slot.startMin !== column.startMin || slot.endMin !== column.endMin)
+      ? formatRange(slot)
+      : null)
   return (
     <button
       type="button"
@@ -44,7 +50,7 @@ export const SessionChip = memo(function SessionChip({ slot, column, onClick }: 
       </div>
       <div className="mt-0.5 flex items-center justify-between text-[11px] opacity-80">
         <span>{slot.room ? `Room ${slot.room}` : 'Room —'}</span>
-        {offGrid && <span>{formatRange(slot)}</span>}
+        {timing && <span className={lab ? 'font-semibold' : undefined}>{timing}</span>}
       </div>
     </button>
   )

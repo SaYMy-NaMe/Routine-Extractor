@@ -61,7 +61,7 @@ export function App() {
 
           <Card
             title="2 · Faculty & header details"
-            subtitle="Search the faculty directory; matched details are filled in for you"
+            subtitle="Enter the faculty initial; name, school and institution are filled in for you"
           >
             <MetadataForm
               profile={state.profile}

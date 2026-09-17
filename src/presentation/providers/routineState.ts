@@ -61,6 +61,8 @@ export type RoutineAction =
   | { type: 'import/done' }
   | { type: 'profile/patch'; patch: Partial<FacultyProfile> }
   | { type: 'profile/autoFilled'; tag: string; patch: Partial<FacultyProfile> }
+  /** The initial was cleared: erase what the lookup filled in. */
+  | { type: 'profile/autoErased'; keys: readonly (keyof FacultyProfile)[] }
   | { type: 'titles/set'; courseCode: string; title: string }
   | { type: 'weekend/set'; days: readonly DayName[] }
 
@@ -121,6 +123,11 @@ export function routineReducer(state: RoutineState, action: RoutineAction): Rout
         autoFilledTag: action.tag,
         autoFilledFields: Object.keys(action.patch) as (keyof FacultyProfile)[],
       }
+    case 'profile/autoErased': {
+      const profile = { ...state.profile }
+      for (const key of action.keys) profile[key] = ''
+      return { ...state, profile, autoFilledTag: null, autoFilledFields: [] }
+    }
     case 'titles/set':
       return { ...state, courseTitles: { ...state.courseTitles, [action.courseCode]: action.title } }
     case 'weekend/set':

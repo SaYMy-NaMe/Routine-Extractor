@@ -4,10 +4,18 @@
  */
 
 import type { jsPDF } from 'jspdf'
-import { DAY_LABELS, type TimeSlot, formatCredits, formatSections, sessionLabel } from '../../domain'
+import {
+  DAY_LABELS,
+  type TimeSlot,
+  formatCredits,
+  formatSections,
+  sessionLabel,
+  sessionTiming,
+} from '../../domain'
 import {
   type ExportData,
   type RoutineExporter,
+  breakWaived,
   emptyDayView,
   isEveningOff,
   slotsAt,
@@ -62,8 +70,16 @@ export function drawRoutinePdf(doc: jsPDF, data: ExportData): jsPDF {
   /* Table geometry ------------------------------------------------------- */
   const tableTop = y + 8
   const dayW = 22
-  const colW = (W - 2 * M - dayW) / Math.max(columns.length, 1)
-  const hasAlt = columns.some((c) => c.altLabel || c.evening)
+  const BREAK_WEIGHT = 0.45
+  const totalWeight = columns.reduce((n, c) => n + (c.isBreak ? BREAK_WEIGHT : 1), 0) || 1
+  const unit = (W - 2 * M - dayW) / totalWeight
+  const widthOf = (c: TimeSlot) => unit * (c.isBreak ? BREAK_WEIGHT : 1)
+  const colX: number[] = []
+  columns.reduce((x, c) => {
+    colX.push(x)
+    return x + widthOf(c)
+  }, M + dayW)
+  const hasAlt = columns.some((c) => c.altLabel || c.evening || c.isBreak)
   const headH = hasAlt ? 12 : 9
 
   const rowChipCount = days.map((day) => Math.max(1, ...columns.map((c) => slotsAt(grid, day, c.id).length)))
@@ -90,15 +106,16 @@ export function drawRoutinePdf(doc: jsPDF, data: ExportData): jsPDF {
   doc.text('DAY', M + 1.5, tableTop + headH - 1.5)
   doc.setFontSize(7.5)
   columns.forEach((c, i) => {
-    const x = M + dayW + i * colW
+    const x = colX[i]
+    const colW = widthOf(c)
     doc.line(x, tableTop, x, tableTop + headH)
     const mid = x + colW / 2
-    if (c.evening) {
-      fillColor(doc, COLORS.eveningBg)
+    if (c.evening || c.isBreak) {
+      fillColor(doc, c.evening ? COLORS.eveningBg : COLORS.weekendBg)
       doc.rect(x, tableTop, colW, headH, 'FD')
-      text(doc, COLORS.eveningInk)
+      text(doc, c.evening ? COLORS.eveningInk : COLORS.weekendInk)
     }
-    const sub = c.altLabel ?? (c.evening ? 'Evening' : undefined)
+    const sub = c.altLabel ?? (c.evening ? 'Evening' : c.isBreak ? '1:00 - 1:30 PM' : undefined)
     if (sub) {
       doc.text(c.label, mid, tableTop + 5, { align: 'center' })
       doc.setFont('helvetica', 'normal').setFontSize(6.5)
@@ -125,13 +142,27 @@ export function drawRoutinePdf(doc: jsPDF, data: ExportData): jsPDF {
 
     const dayCols = columns.filter((c) => !c.evening)
     const drawCell = (c: TimeSlot, x: number) => {
+      const colW = widthOf(c)
       if (c.evening) {
         fillColor(doc, COLORS.eveningBg)
+        doc.rect(x, ry, colW, h, 'FD')
+      } else if (c.isBreak && !breakWaived(grid, day)) {
+        fillColor(doc, COLORS.weekendBg)
         doc.rect(x, ry, colW, h, 'FD')
       } else {
         doc.rect(x, ry, colW, h)
       }
       const mid = x + colW / 2
+      if (c.isBreak) {
+        const waived = breakWaived(grid, day)
+        doc.setFont('helvetica', waived ? 'normal' : 'bold').setFontSize(6.5)
+        text(doc, waived ? COLORS.muted : COLORS.weekendInk)
+        doc.text(waived ? '—' : 'BREAK', mid, ry + h / 2 + 1.1, {
+          align: 'center',
+          charSpace: waived ? 0 : 0.5,
+        })
+        return
+      }
       if (isEveningOff(grid, day, c)) {
         doc.setFont('helvetica', 'bold').setFontSize(7.5)
         text(doc, COLORS.muted)
@@ -146,10 +177,12 @@ export function drawRoutinePdf(doc: jsPDF, data: ExportData): jsPDF {
         text(doc, lab ? COLORS.labInk : COLORS.theoryInk)
         doc.setFont('helvetica', 'bold').setFontSize(8)
         const label = sessionLabel(s, c)
-        if (s.room) {
+        // Labs always print their explicit timing next to the room.
+        const detail = [s.room, sessionTiming(s)].filter(Boolean).join(' · ')
+        if (detail) {
           doc.text(label, mid, cy + chipH * 0.42, { align: 'center' })
-          doc.setFont('helvetica', 'normal').setFontSize(7)
-          doc.text(s.room, mid, cy + chipH * 0.78, { align: 'center' })
+          doc.setFont('helvetica', lab ? 'bold' : 'normal').setFontSize(lab ? 6.3 : 7)
+          doc.text(detail, mid, cy + chipH * 0.78, { align: 'center' })
         } else {
           doc.text(label, mid, cy + chipH * 0.6, { align: 'center' })
         }
@@ -158,8 +191,8 @@ export function drawRoutinePdf(doc: jsPDF, data: ExportData): jsPDF {
 
     if (badge) {
       const style = emptyDay.badges[badge.kind]
-      const spanCols = badge.spansEvening ? columns.length : dayCols.length
-      const spanW = spanCols * colW
+      const spanned = badge.spansEvening ? columns : dayCols
+      const spanW = spanned.reduce((n, c) => n + widthOf(c), 0)
       const x0 = M + dayW
       // Cell background, then the pill-shaped badge with the user's styling.
       fillColor(doc, COLORS.headBg)
@@ -199,11 +232,11 @@ export function drawRoutinePdf(doc: jsPDF, data: ExportData): jsPDF {
       drawColor(doc, COLORS.line).setLineWidth(0.25)
       if (!badge.spansEvening) {
         columns.forEach((c, i) => {
-          if (c.evening) drawCell(c, M + dayW + i * colW)
+          if (c.evening) drawCell(c, colX[i])
         })
       }
     } else {
-      columns.forEach((c, i) => drawCell(c, M + dayW + i * colW))
+      columns.forEach((c, i) => drawCell(c, colX[i]))
     }
     ry += h
   })

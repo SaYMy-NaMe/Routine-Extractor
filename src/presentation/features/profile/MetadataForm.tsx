@@ -62,14 +62,14 @@ export function MetadataForm({
   const searchHint = !routineLoaded
     ? 'Select a master routine first'
     : !profile.searchQuery.trim()
-      ? 'Type the short form or a name (e.g. ASHRAF)'
+      ? 'Type the faculty initial (e.g. ASHRAF or MHN)'
       : matchCount
         ? `${matchCount} class${matchCount === 1 ? '' : 'es'} found${autoFilledTag ? ` · profile filled from the directory` : ''}`
         : 'No classes found for this term'
 
   return (
     <div className="space-y-5">
-      <Field label="Faculty search" hint={searchHint} error={errors.searchQuery}>
+      <Field label="Faculty initial" hint={searchHint} error={errors.searchQuery}>
         {(id, describedBy) => (
           <FacultySearch
             id={id}
@@ -89,7 +89,7 @@ export function MetadataForm({
             error={errors[f.key]}
             hint={
               autoFilledFields.includes(f.key)
-                ? `Auto-filled from the directory (${autoFilledTag}) — edit if needed`
+                ? `Filled from initial ${autoFilledTag} — cleared when the initial is erased`
                 : undefined
             }
             className={f.span ? 'sm:col-span-2' : undefined}

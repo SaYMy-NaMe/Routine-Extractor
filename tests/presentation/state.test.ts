@@ -39,6 +39,12 @@ describe('routineReducer', () => {
     })
     expect(s.autoFilledTag).toBe('ASHRAF')
     expect(s.autoFilledFields).toEqual(['fullName'])
+    const erased = routineReducer(
+      { ...s, profile: { ...s.profile, school: 'S', institution: 'I' } },
+      { type: 'profile/autoErased', keys: ['fullName', 'school', 'institution'] },
+    )
+    expect(erased.profile).toMatchObject({ fullName: '', school: '', institution: '' })
+    expect(erased.autoFilledTag).toBeNull()
     expect(s.profile.fullName).toBe('A')
     expect(routineReducer(s, { type: 'grid/removeTimeSlot', id: 'missing' })).toBe(s)
   })

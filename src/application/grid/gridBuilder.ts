@@ -46,12 +46,13 @@ export function inferSessionType(cell: ParsedCell): SessionType {
  * overlaps most (ties broken by the closest start time).
  */
 export function chooseColumn(slots: readonly TimeSlot[], range: TimeRange): TimeSlot | null {
-  const exact = slots.find((s) => sameRange(s, range))
+  const candidates = slots.filter((s) => !s.isBreak)
+  const exact = candidates.find((s) => sameRange(s, range))
   if (exact) return exact
   let best: TimeSlot | null = null
   let bestOverlap = 0
   let bestDist = Infinity
-  for (const s of slots) {
+  for (const s of candidates) {
     const o = overlapMinutes(s, range)
     const d = Math.abs(s.startMin - range.startMin)
     if (o > bestOverlap || (o === bestOverlap && o > 0 && d < bestDist)) {

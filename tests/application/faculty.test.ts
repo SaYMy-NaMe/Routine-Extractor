@@ -17,15 +17,17 @@ describe('faculty lookup', async () => {
     expect(parse.institutionHint).toBe('East Delta University')
   })
 
-  it('ranks short-form matches above name matches', () => {
-    const byTag = searchFaculty(parse.facultyDirectory, 'ashraf')
-    expect(byTag[0].entry.shortForm).toBe('ASHRAF')
-    const byName = searchFaculty(parse.facultyDirectory, 'chowdhury')
-    expect(byName.some((c) => c.entry.shortForm === 'ASHRAF')).toBe(true)
+  it('matches on the initial only: exact first, then prefix, never by name', () => {
+    const exact = searchFaculty(parse.facultyDirectory, 'ashraf')
+    expect(exact[0].entry.shortForm).toBe('ASHRAF')
+    expect(exact[0].rank).toBe(0)
+    const prefix = searchFaculty(parse.facultyDirectory, 'AS')
+    expect(prefix.every((c) => c.entry.shortForm.startsWith('AS'))).toBe(true)
+    expect(searchFaculty(parse.facultyDirectory, 'chowdhury')).toEqual([])
     expect(searchFaculty(parse.facultyDirectory, '')).toEqual([])
   })
 
-  it('resolves an unambiguous query into auto-fill fields and leaves unknown ones alone', () => {
+  it('resolves an exact initial into name, school and institution only', () => {
     const match = resolveFaculty(parse, 'ASHRAF')!
     expect(match.entry.shortForm).toBe('ASHRAF')
     expect(match.fields).toEqual({
@@ -33,8 +35,8 @@ describe('faculty lookup', async () => {
       school: 'School of Science, Engineering & Technology',
       institution: 'East Delta University',
     })
-    expect(match.fields.title).toBeUndefined() // no designation column in this routine
-    expect(resolveFaculty(parse, 'a')).toBeNull() // ambiguous prefix
+    expect(Object.keys(match.fields)).not.toContain('title')
+    expect(resolveFaculty(parse, 'A')).toBeNull() // ambiguous prefix
   })
 
   it('reads an optional designation column', () => {
@@ -58,9 +60,6 @@ describe('faculty lookup', async () => {
       },
     ]).facultyDirectory
     expect(entries).toEqual([{ shortForm: 'JD', name: 'Dr. Jane Doe', designation: 'Assistant Professor' }])
-    expect(resolveFaculty({ facultyDirectory: entries }, 'jd')?.fields).toEqual({
-      fullName: 'Jane Doe',
-      title: 'Assistant Professor',
-    })
+    expect(resolveFaculty({ facultyDirectory: entries }, 'jd')?.fields).toEqual({ fullName: 'Jane Doe' })
   })
 })

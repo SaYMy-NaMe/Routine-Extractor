@@ -11,7 +11,7 @@ interface Props {
   onChange: (value: string) => void
 }
 
-/** Combobox over the faculty directory: type a short form or a name, pick a match. */
+/** Combobox over the faculty directory: type an initial, pick a match. */
 export function FacultySearch({ id, describedBy, value, directory, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [cursor, setCursor] = useState(0)
@@ -67,7 +67,7 @@ export function FacultySearch({ id, describedBy, value, directory, onChange }: P
             setOpen(false)
           }
         }}
-        placeholder="ASHRAF or a name"
+        placeholder="ASHRAF"
         autoCapitalize="characters"
         autoComplete="off"
         spellCheck={false}

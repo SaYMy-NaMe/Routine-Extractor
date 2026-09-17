@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  breakWaived,
   buildRoutine,
   buildRoutineGrid,
   freeColumns,
@@ -37,6 +38,7 @@ describe('gridBuilder', () => {
     expect(evening.id).toBe(EVENING_SLOT_ID)
     expect(usedTimeSlots(base).map((t) => t.label)).toEqual([
       '11:30 AM - 1:00 PM',
+      'Break',
       '3:00 PM - 4:30 PM',
       '6:30 PM - 9:30 PM',
     ])
@@ -110,7 +112,7 @@ describe('one class per cell', () => {
     const free = freeColumns(base, 'Sat').map((c) => c.label)
     expect(free).not.toContain('11:30 AM - 1:00 PM')
     expect(free).toContain('10:00 AM - 11:30 AM')
-    expect(freeColumns(base, 'Sun')).toHaveLength(base.timeSlots.length)
+    expect(freeColumns(base, 'Sun')).toHaveLength(base.timeSlots.length - 1) // the break column never takes a class
   })
 
   it('user-added columns stay visible while empty and can be removed', () => {
@@ -119,5 +121,35 @@ describe('one class per cell', () => {
     expect(usedTimeSlots(g).map((t) => t.label)).toContain('7:00 AM - 8:00 AM')
     const g2 = gridReducer(g, { type: 'grid/removeTimeSlot', id: g.timeSlots[0].id })
     expect(usedTimeSlots(g2).map((t) => t.label)).not.toContain('7:00 AM - 8:00 AM')
+  })
+})
+
+describe('daily break', () => {
+  const breakCol = base.timeSlots.find((t) => t.isBreak)!
+
+  it('is a fixed 1:00–1:30 PM column that never holds a class', () => {
+    expect(breakCol.label).toBe('Break')
+    expect(breakCol.startMin).toBe(13 * 60)
+    expect(
+      gridReducer(base, {
+        type: 'grid/upsertSlot',
+        slot: manual({ id: 'b', slotId: breakCol.id, startMin: 780, endMin: 810 }),
+      }),
+    ).toBe(base)
+    expect(gridReducer(base, { type: 'grid/removeTimeSlot', id: breakCol.id })).toBe(base)
+  })
+
+  it('is waived on a day with a lab running 11:30 AM – 1:30 PM', () => {
+    const { grid } = buildRoutine([
+      makeCell('Sat', 690, 810, 'CSE 224', '3', '105', 'lab'), // 11:30–1:30 lab
+      makeCell('Mon', 690, 780, 'CSE 443', '1', '311'), // theory ending at 1:00
+      makeCell('Tue', 690, 810, 'CSE 215', '1', '110'), // theory 11:30–1:30 does not waive
+    ])
+    expect(breakWaived(grid, 'Sat')).toBe(true)
+    expect(breakWaived(grid, 'Mon')).toBe(false)
+    expect(breakWaived(grid, 'Tue')).toBe(false)
+    // The 11:30–1:30 lab still lands in the 11:30–1:00 column, never in the break column.
+    const sat = grid.slots.find((s) => s.day === 'Sat')!
+    expect(grid.timeSlots.find((t) => t.id === sat.slotId)!.label).toBe('11:30 AM - 1:00 PM')
   })
 })

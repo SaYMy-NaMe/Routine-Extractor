@@ -163,6 +163,26 @@
   padding-bottom: 2px;
   font-size: 10px;
 }
+.sheet__th--break {
+  width: 64px;
+  background: #fffbeb !important;
+  color: #92400e;
+}
+.sheet__break {
+  background: #fffbeb;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #92400e;
+}
+.sheet__break--waived {
+  background: #fafafa;
+  color: #9ca3af;
+  font-weight: 500;
+}
+.sheet__timing {
+  font-weight: 600;
+}
 .sheet__th--evening {
   background: var(--evening-bg) !important;
   color: var(--evening-ink);

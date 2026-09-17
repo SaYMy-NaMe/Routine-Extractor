@@ -59,6 +59,15 @@ export const EVENING_RANGE: TimeRange = { startMin: 18 * 60 + 30, endMin: 21 * 6
 
 export const isEveningRange = (r: TimeRange): boolean => sameRange(r, EVENING_RANGE)
 
+/** The standard daily break (1:00 PM – 1:30 PM), laid out as its own column. */
+export const BREAK_RANGE: TimeRange = { startMin: 13 * 60, endMin: 13 * 60 + 30 }
+
+export const isBreakRange = (r: TimeRange): boolean => sameRange(r, BREAK_RANGE)
+
+/** A lab that runs across the break (e.g. 11:30 AM – 1:30 PM) waives it for that day. */
+export const coversBreak = (r: TimeRange): boolean =>
+  r.startMin <= BREAK_RANGE.startMin && r.endMin >= BREAK_RANGE.endMin
+
 /** A column of the personal routine grid. */
 export interface TimeSlot extends TimeRange {
   readonly id: string
@@ -70,6 +79,8 @@ export interface TimeSlot extends TimeRange {
   readonly evening?: boolean
   /** A column the user added by hand: stays visible while empty until removed. */
   readonly pinned?: boolean
+  /** The daily break column: never holds a class, waived on days with a lab running through it. */
+  readonly isBreak?: boolean
 }
 
 export const timeSlotId = (r: TimeRange): string => `${r.startMin}-${r.endMin}`
@@ -81,6 +92,7 @@ export function makeTimeSlot(range: TimeRange, extra: Partial<Pick<TimeSlot, 'al
     startMin: range.startMin,
     endMin: range.endMin,
     ...(isEveningRange(range) ? { evening: true } : {}),
+    ...(isBreakRange(range) ? { isBreak: true, label: 'Break' } : {}),
     ...extra,
   }
 }
@@ -92,6 +104,7 @@ export const DEFAULT_TIME_RANGES: readonly TimeRange[] = [
   [8 * 60 + 30, 10 * 60],
   [10 * 60, 11 * 60 + 30],
   [11 * 60 + 30, 13 * 60],
+  [BREAK_RANGE.startMin, BREAK_RANGE.endMin],
   [13 * 60 + 30, 15 * 60],
   [15 * 60, 16 * 60 + 30],
   [16 * 60 + 30, 18 * 60],
@@ -128,6 +141,11 @@ export function sessionLabel(slot: ScheduleSlot, column?: Pick<TimeSlot, 'evenin
   let label = `${fullCourseCode(slot)}${slot.type === 'lab' ? ' LAB' : ''}`
   if (column?.evening && slot.frequency) label += ` [${FREQUENCY_LABELS[slot.frequency]}]`
   return label
+}
+
+/** Labs always print their explicit start–end timing; theory classes follow the column. */
+export function sessionTiming(slot: ScheduleSlot): string | null {
+  return slot.type === 'lab' ? formatRange(slot) : null
 }
 
 /* ------------------------------------------------------------------------- */

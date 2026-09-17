@@ -7,8 +7,16 @@ import {
   formatCredits,
   formatSections,
   sessionLabel,
+  sessionTiming,
 } from '../../../domain'
-import { type ExportData, emptyDayView, isEveningOff, slotsAt, visibleDays } from '../../../application'
+import {
+  type ExportData,
+  breakWaived,
+  emptyDayView,
+  isEveningOff,
+  slotsAt,
+  visibleDays,
+} from '../../../application'
 import {
   EVENING_LEGEND,
   OFF_CELL_TEXT,
@@ -32,7 +40,14 @@ export const RoutineSheet = memo(function RoutineSheet({ data }: Props) {
   const contact = contactLine(profile)
 
   const cell = (day: DayName, col: TimeSlot) =>
-    isEveningOff(grid, day, col) ? (
+    col.isBreak ? (
+      <td
+        key={col.id}
+        className={`sheet__cell sheet__break ${breakWaived(grid, day) ? 'sheet__break--waived' : ''}`}
+      >
+        {breakWaived(grid, day) ? '—' : 'BREAK'}
+      </td>
+    ) : isEveningOff(grid, day, col) ? (
       <td key={col.id} className="sheet__cell sheet__cell--evening sheet__offcell">
         {OFF_CELL_TEXT}
       </td>
@@ -42,6 +57,7 @@ export const RoutineSheet = memo(function RoutineSheet({ data }: Props) {
           <span key={s.id} className={`sheet__chip ${s.type === 'lab' ? 'sheet__chip--lab' : ''}`}>
             <b>{sessionLabel(s, col)}</b>
             {s.room && <small>{s.room}</small>}
+            {sessionTiming(s) && <small className="sheet__timing">{sessionTiming(s)}</small>}
           </span>
         ))}
       </td>
@@ -69,10 +85,14 @@ export const RoutineSheet = memo(function RoutineSheet({ data }: Props) {
               <span className="d">DAY</span>
             </th>
             {columns.map((c) => (
-              <th key={c.id} className={c.evening ? 'sheet__th--evening' : undefined}>
+              <th
+                key={c.id}
+                className={c.evening ? 'sheet__th--evening' : c.isBreak ? 'sheet__th--break' : undefined}
+              >
                 {c.label}
                 {c.altLabel && <span className="sheet__alt">{c.altLabel}</span>}
                 {c.evening && <span className="sheet__alt">Evening</span>}
+                {c.isBreak && <span className="sheet__alt">1:00 PM - 1:30 PM</span>}
               </th>
             ))}
           </tr>

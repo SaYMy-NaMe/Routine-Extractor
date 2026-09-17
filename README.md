@@ -5,7 +5,7 @@ member, and get a clean personal weekly routine with a credit-workload summary �
 grid and exportable as a single-page **PDF** or an editable **DOCX**. Parsing and rendering run
 entirely in the browser.
 
-![Vite](https://img.shields.io/badge/Vite-React%2019-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38bdf8) ![Tests](https://img.shields.io/badge/vitest-57%20passing-brightgreen)
+![Vite](https://img.shields.io/badge/Vite-React%2019-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38bdf8) ![Tests](https://img.shields.io/badge/vitest-60%20passing-brightgreen)
 
 ## Scripts
 
@@ -24,15 +24,18 @@ npx prettier --write .
    course cells), then you are prompted for a semester title (pre-filled from the document, e.g.
    "Summer 2026"). The parsed routine is stored permanently and listed in the library; an existing
    title is replaced. Selecting a routine loads it and **locks the Semester field** to its title.
-2. **Faculty search** — type a short form (`ASHRAF`) or a name (`chowdhury`); the combobox ranks
-   directory matches (exact short form → prefix → name token → substring). An unambiguous match
-   **auto-fills Full name, Designation, School and Institution** from what the document knows
-   (designation only when the directory has that column); everything else stays your own input.
+2. **Faculty initial** — the search term is strictly the faculty initial (`ASHRAF`, `MHN`); the
+   combobox ranks directory matches by exact initial, then prefix. An unambiguous match
+   **auto-fills Full name, School and Institution** only; designation and every other field stay
+   your own input. Clearing the initial immediately **erases** those three auto-filled fields.
 3. **Grid** — sessions are projected onto Day × Time. **Each cell holds exactly one class**: the
    builder keeps the first parsed class per cell (and tells you how many were skipped), editors
    only offer free cells, and the reducer refuses to stack. Lab blocks fold into the theory column
-   they overlap; the `6:30 PM – 9:30 PM` evening column is always present (theory = weekly, lab =
-   alternating weeks); empty days show a full-width "No Class On this day" / "Weekend" badge.
+   they overlap and **labs always print their explicit start–end timing**; a fixed
+   **1:00 – 1:30 PM Break** column is laid out every day and automatically **waived on days where a
+   lab runs through it** (e.g. 11:30 AM – 1:30 PM); the `6:30 PM – 9:30 PM` evening column is
+   always present (theory = weekly, lab = alternating weeks); empty days show a full-width
+   "No Class On this day" / "Weekend" badge.
    Toolbar: layout **Scale**, **+ Time slot**, **Reset**. Layout is automatic — cards on phones,
    a table on larger screens.
 4. **Workload** — 3 credits per theory section, 1.5 per lab section; a section counts once.
@@ -105,7 +108,7 @@ src/
 
 - **Functionality** — the ASHRAF Summer 2026 schedule is asserted cell-for-cell from both the PDF
   and the DOCX fixture; the 21-credit benchmark, occupancy rule, lookup ranking, sniffing and
-  library behaviour are unit-tested (57 tests).
+  library behaviour, break waiving and lookup auto-erase are unit-tested (60 tests).
 - **Usability** — responsive from 360 px phones to desktops, keyboard-accessible combobox and
   dialogs, ARIA live regions, toast feedback, dark mode.
 - **Reliability** — three-layer import validation with user-facing `ImportError`s, defensive

@@ -8,7 +8,7 @@ import {
   type ScheduleSlot,
   type TimeSlot,
 } from '../../../domain'
-import { emptyDayView, isEveningOff, slotsAt, visibleDays } from '../../../application'
+import { breakWaived, emptyDayView, isEveningOff, slotsAt, visibleDays } from '../../../application'
 import { cx } from '../../components/ui'
 import { EmptyDayBadge } from './EmptyDayBadge'
 import { SessionChip } from './SessionChip'
@@ -63,12 +63,16 @@ export function GridTable(p: Props) {
                 className={cx(
                   'group relative border-b border-l border-slate-200 px-2 py-2 text-center font-semibold dark:border-slate-700',
                   c.evening && 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200',
+                  c.isBreak && 'w-20 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
                 )}
               >
                 <div>
                   {c.evening ? '🌙 ' : ''}
                   {c.label}
                 </div>
+                {c.isBreak && (
+                  <div className="text-[10px] font-normal normal-case opacity-70">1:00 PM - 1:30 PM</div>
+                )}
                 {c.altLabel && (
                   <div className="text-[10px] font-normal normal-case opacity-70">{c.altLabel}</div>
                 )}
@@ -128,7 +132,11 @@ export function GridTable(p: Props) {
                   </td>
                 )}
                 {columns.map((col) =>
-                  col.evening ? (
+                  col.isBreak ? (
+                    badge ? null : (
+                      <BreakCell key={col.id} waived={breakWaived(grid, day)} />
+                    )
+                  ) : col.evening ? (
                     badge?.spansEvening ? null : (
                       <EveningCell
                         key={col.id}
@@ -156,6 +164,27 @@ export function GridTable(p: Props) {
         </tbody>
       </table>
     </div>
+  )
+}
+
+/** The 1:00–1:30 PM break; waived when a lab runs through it that day. */
+function BreakCell({ waived }: { waived: boolean }) {
+  return (
+    <td
+      className={cx(
+        'border-l border-slate-200 p-1.5 text-center align-middle dark:border-slate-700',
+        !waived && 'bg-amber-50/70 dark:bg-amber-950/30',
+      )}
+      title={waived ? 'Break waived — a lab runs through 1:00–1:30 PM' : 'Daily break'}
+    >
+      {waived ? (
+        <span className="text-[10px] tracking-wide text-slate-400 uppercase">no break</span>
+      ) : (
+        <span className="text-[10px] font-bold tracking-widest text-amber-800 uppercase dark:text-amber-200">
+          Break
+        </span>
+      )}
+    </td>
   )
 }
 

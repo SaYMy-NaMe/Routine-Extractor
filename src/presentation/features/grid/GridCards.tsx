@@ -8,7 +8,14 @@ import {
   type TimeSlot,
   formatRange,
 } from '../../../domain'
-import { emptyDayView, freeColumns, isEveningOff, slotsAt, visibleDays } from '../../../application'
+import {
+  breakWaived,
+  emptyDayView,
+  freeColumns,
+  isEveningOff,
+  slotsAt,
+  visibleDays,
+} from '../../../application'
 import { Button } from '../../components/ui'
 import { EmptyDayBadge } from './EmptyDayBadge'
 import type { CellOpen } from './GridTable'
@@ -50,7 +57,7 @@ export function GridCards({
         const off = grid.offDays[day]
         const badge = emptyDayView(grid, day, emptyDay)
         const rows = columns
-          .filter((c) => !c.evening)
+          .filter((c) => !c.evening && !c.isBreak)
           .flatMap((c) => slotsAt(grid, day, c.id).map((s) => ({ column: c, slot: s })))
           .sort((a, b) => a.slot.startMin - b.slot.startMin)
         const eveningSession = evening ? slotsAt(grid, day, evening.id)[0] : undefined
@@ -91,6 +98,19 @@ export function GridCards({
                   </div>
                 </div>
               ))}
+
+              {!badge && (
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="w-[4.5rem] shrink-0 text-slate-500 tabular-nums">1:00–1:30 PM</span>
+                  {breakWaived(grid, day) ? (
+                    <span className="text-slate-400 uppercase">No break — lab runs through</span>
+                  ) : (
+                    <span className="rounded bg-amber-50 px-2 py-0.5 font-bold tracking-widest text-amber-800 uppercase dark:bg-amber-950/40 dark:text-amber-200">
+                      Break
+                    </span>
+                  )}
+                </div>
+              )}
 
               {evening && !badge?.spansEvening && (
                 <div className="flex items-start gap-2 rounded-lg bg-indigo-50/60 p-2 dark:bg-indigo-950/30">

@@ -1,12 +1,10 @@
 /**
  * Faculty lookup engine.
  *
- * Resolves a typed query ("ASHRAF", "ashrafur", "chowdhury") against the
- * master routine's faculty directory and ranks candidates: exact short form
- * first, then short-form prefix, then name-token prefix, then substring.
- * A resolved match yields the profile fields the document can vouch for
- * (name, designation, school, institution); anything the document does not
- * know is left for the user to fill in.
+ * The search term is strictly a faculty initial ("ASHRAF", "MHN"): candidates
+ * are ranked by exact initial, then initial prefix. A resolved match yields
+ * only the fields the document can vouch for — full name, school and
+ * institution; designation and everything else stay manual input.
  */
 
 import {
@@ -22,29 +20,26 @@ export interface FacultyCandidate {
   readonly rank: number
 }
 
-export type AutoFillFields = Partial<Pick<FacultyProfile, 'fullName' | 'title' | 'school' | 'institution'>>
+export type AutoFillFields = Partial<Pick<FacultyProfile, 'fullName' | 'school' | 'institution'>>
+
+/** The profile fields the lookup owns (filled on match, erased when the initial is cleared). */
+export const AUTO_FILL_KEYS = ['fullName', 'school', 'institution'] as const
 
 export interface FacultyMatch {
   readonly entry: FacultyDirectoryEntry
   readonly fields: AutoFillFields
 }
 
-const norm = (s: string) =>
+const normInitial = (s: string) =>
   s
     .toUpperCase()
-    .replace(/[^A-Z0-9 ]+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[^A-Z0-9.]+/g, '')
     .trim()
 
 function rankEntry(entry: FacultyDirectoryEntry, q: string): number | null {
-  const short = entry.shortForm.toUpperCase()
-  if (short === q) return 0
-  if (short.startsWith(q)) return 1
-  const name = norm(cleanPersonName(entry.name))
-  const tokens = name.split(' ')
-  if (tokens.some((t) => t.startsWith(q))) return 2
-  if (name.includes(q)) return 3
-  if (short.includes(q)) return 4
+  const initial = normInitial(entry.shortForm)
+  if (initial === q) return 0
+  if (initial.startsWith(q)) return 1
   return null
 }
 
@@ -54,7 +49,7 @@ export function searchFaculty(
   query: string,
   limit = 8,
 ): FacultyCandidate[] {
-  const q = norm(query)
+  const q = normInitial(query)
   if (!q) return []
   const out: FacultyCandidate[] = []
   for (const entry of directory) {
@@ -77,7 +72,6 @@ export function resolveFaculty(
   if (!best) return null
   if (best.rank !== 0 && candidates.length > 1) return null
   const fields: AutoFillFields = { fullName: cleanPersonName(best.entry.name) }
-  if (best.entry.designation) fields.title = best.entry.designation
   if (parse.schoolHint) fields.school = parse.schoolHint
   if (parse.institutionHint) fields.institution = parse.institutionHint
   return { entry: best.entry, fields }

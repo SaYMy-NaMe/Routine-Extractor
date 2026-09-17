@@ -61,7 +61,7 @@ export function gridReducer(
 
     case 'grid/upsertSlot': {
       const column = grid.timeSlots.find((t) => t.id === action.slot.slotId)
-      if (!column) return grid
+      if (!column || column.isBreak) return grid
       const slot: ScheduleSlot = column.evening
         ? { ...action.slot, frequency: action.slot.frequency ?? defaultFrequency(action.slot.type) }
         : action.slot
@@ -108,7 +108,7 @@ export function gridReducer(
 
     case 'grid/removeTimeSlot': {
       const target = grid.timeSlots.find((t) => t.id === action.id)
-      if (!target || target.evening) return grid // the evening column is pinned
+      if (!target || target.evening || target.isBreak) return grid // evening and break columns are fixed
       return withSlots(
         { ...grid, timeSlots: grid.timeSlots.filter((t) => t.id !== action.id) },
         grid.slots.filter((s) => s.slotId !== action.id),
